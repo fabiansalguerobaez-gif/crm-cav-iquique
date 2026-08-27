@@ -352,6 +352,7 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
         <h2>Panel del día</h2>
         <p>Gestiones registradas hoy por el equipo.</p>
       </div>
+      <div class="tabs-filter" id="hoyExecFilter"></div>
       <div class="grid grid-4" id="hoyStats" style="margin-bottom:22px;"></div>
       <div class="card">
         <table>
@@ -448,7 +449,7 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="section-title" style="margin-top:0;">Meta de ingresos diarios (6 · equipo)</div>
+        <div class="section-title" style="margin-top:0;">Meta de ingresos diarios (6 por ejecutivo)</div>
         <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Últimos 21 días. La línea marca la meta diaria.</p>
         <div id="barsDiarios"></div>
       </div>
@@ -596,7 +597,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const LOCKED_EXEC = (urlParams.get('ejecutivo') && EJECUTIVOS.includes(urlParams.get('ejecutivo'))) ? urlParams.get('ejecutivo') : null;
 
 const META_INDIVIDUAL = 13;
-const META_DIARIA_EQUIPO = 6;
+const META_DIARIA_INDIVIDUAL = 6;
 const CERRADAS = new Set(['cerrado','emitido']);
 let metasExecSel = LOCKED_EXEC || 'all';
 function pad2(n){ return String(n).padStart(2,'0'); }
@@ -830,10 +831,19 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   }
 });
 
+let hoyExecSel = LOCKED_EXEC || 'all';
+
 function renderHoy(){
+  if(LOCKED_EXEC){
+    hoyExecSel = LOCKED_EXEC;
+    document.getElementById('hoyExecFilter').style.display = 'none';
+  }else{
+    document.getElementById('hoyExecFilter').style.display = '';
+    buildExecFilterPills('hoyExecFilter', hoyExecSel, (val)=>{ hoyExecSel = val; renderHoy(); });
+  }
   const today = todayISO();
   let list = gestiones.filter(g=>g.fecha===today);
-  if(LOCKED_EXEC) list = list.filter(g=>g.ejecutivo===LOCKED_EXEC);
+  if(hoyExecSel!=='all') list = list.filter(g=>g.ejecutivo===hoyExecSel);
   list = list.sort((a,b)=>b.createdAt-a.createdAt);
   const statsBox = document.getElementById('hoyStats');
   const total = list.length;
@@ -1148,7 +1158,7 @@ function renderMetas(){
     cardEj.style.display = 'none';
   }
 
-  const metaDiaria = selectedExec==='all' ? META_DIARIA_EQUIPO : Math.max(1, Math.round(META_DIARIA_EQUIPO / EJECUTIVOS.length * 10) / 10);
+  const metaDiaria = selectedExec==='all' ? META_DIARIA_INDIVIDUAL * EJECUTIVOS.length : META_DIARIA_INDIVIDUAL;
   const days = [];
   for(let i=20;i>=0;i--){
     const d = new Date(); d.setDate(d.getDate()-i);
@@ -1226,7 +1236,7 @@ function renderMetas(){
   renderMiniRank('rankCerradas', countCerradas);
 
   document.getElementById('barsProyeccion').innerHTML = execsInScope.map(ex=>{
-    const count = gestiones.filter(g=>CERRADAS.has(g.estado) && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && g.ejecutivo===ex).length;
+    const count = gestiones.filter(g=>g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && g.ejecutivo===ex).length;
     const proy = Math.round(ritmo>0 ? (count/ritmo) : count);
     const color = proyeccionColor(proy);
     const pct = Math.min(100, proy/20*100);
