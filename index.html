@@ -25,6 +25,8 @@
   --cotizacion-dark:#1E3D26;
   --cerrado:#5C8BE0;
   --cerrado-dark:#152A4A;
+  --emitido:#9C8CF5;
+  --emitido-dark:#241F3D;
   --perdido:#FF5D73;
   --perdido-dark:#4A1420;
 }
@@ -138,6 +140,7 @@ select#ejecutivoActivo{
 .chip.pendiente{color:var(--pendiente);background:var(--pendiente-dark);}
 .chip.enviada_cotizacion{color:var(--cotizacion);background:var(--cotizacion-dark);}
 .chip.cerrado{color:var(--cerrado);background:var(--cerrado-dark);}
+.chip.emitido{color:var(--emitido);background:var(--emitido-dark);}
 .chip.perdido{color:var(--perdido);background:var(--perdido-dark);}
 
 .urg{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
@@ -278,8 +281,23 @@ tr:hover td{background:var(--surface-2);}
               <option value="pendiente">Pendiente</option>
               <option value="enviada_cotizacion">Enviada cotización</option>
               <option value="cerrado">Cerrado</option>
+              <option value="emitido">Emitido</option>
               <option value="perdido">Perdido</option>
             </select>
+          </div>
+          <div class="field" id="grp-fechaCierre" style="display:none;">
+            <label>Día en que se cerró<span class="req">*</span></label>
+            <input type="date" id="f-fechaCierre">
+            <span class="err-msg">Selecciona la fecha en que se cerró la venta.</span>
+          </div>
+          <div class="field" id="grp-fechaInstalacion" style="display:none;">
+            <label>Fecha de instalación<span class="req">*</span></label>
+            <input type="date" id="f-fechaInstalacion">
+            <span class="err-msg">Selecciona la fecha de instalación.</span>
+          </div>
+          <div class="field" id="grp-numeroOrden" style="display:none;">
+            <label>Número de orden</label>
+            <input type="text" id="f-numeroOrden" placeholder="Ej: OR-10293">
           </div>
           <div class="field" id="grp-proxima">
             <label>Próximo contacto<span class="req">*</span></label>
@@ -373,6 +391,13 @@ tr:hover td{background:var(--surface-2);}
       <div class="section-title">Para hoy</div>
       <div id="alertHoy"></div>
       <div class="empty" id="alertHoyEmpty" style="display:none;">No hay seguimientos programados para hoy.</div>
+
+      <div class="section-title">Instalaciones atrasadas</div>
+      <div id="alertInstalVencidas"></div>
+      <div class="empty" id="alertInstalVencidasEmpty" style="display:none;">Sin instalaciones atrasadas.</div>
+      <div class="section-title">Instalaciones para hoy</div>
+      <div id="alertInstalHoy"></div>
+      <div class="empty" id="alertInstalHoyEmpty" style="display:none;">No hay instalaciones programadas para hoy.</div>
     </div>
 
   </div>
@@ -391,8 +416,21 @@ tr:hover td{background:var(--surface-2);}
         <option value="pendiente">Pendiente</option>
         <option value="enviada_cotizacion">Enviada cotización</option>
         <option value="cerrado">Cerrado</option>
+        <option value="emitido">Emitido</option>
         <option value="perdido">Perdido</option>
       </select>
+    </div>
+    <div class="field" id="edit-grp-fechaCierre" style="margin-top:12px;display:none;">
+      <label>Día en que se cerró</label>
+      <input type="date" id="edit-fechaCierre">
+    </div>
+    <div class="field" id="edit-grp-fechaInstalacion" style="margin-top:12px;display:none;">
+      <label>Fecha de instalación</label>
+      <input type="date" id="edit-fechaInstalacion">
+    </div>
+    <div class="field" id="edit-grp-numeroOrden" style="margin-top:12px;display:none;">
+      <label>Número de orden</label>
+      <input type="text" id="edit-numeroOrden" placeholder="Ej: OR-10293">
     </div>
     <div class="field" style="margin-top:12px;">
       <label>Próximo contacto</label>
@@ -415,6 +453,7 @@ const ESTADOS = [
   {key:'pendiente', label:'Pendiente', color:'#FFB020'},
   {key:'enviada_cotizacion', label:'Enviada cotización', color:'#7BD98C'},
   {key:'cerrado', label:'Cerrado', color:'#5C8BE0'},
+  {key:'emitido', label:'Emitido', color:'#9C8CF5'},
   {key:'perdido', label:'Perdido', color:'#FF5D73'}
 ];
 const EST_MAP = Object.fromEntries(ESTADOS.map(e=>[e.key,e]));
@@ -487,6 +526,8 @@ async function loadData(){
       nombre: r.nombre, rut: r.rut, telefono: r.telefono, direccion: r.direccion,
       comuna: r.comuna, producto: r.producto, estado: r.estado,
       proximaFecha: normalizeDate(r.proximaFecha), comentario: r.comentario,
+      fechaCierre: normalizeDate(r.fechaCierre), numeroOrden: r.numeroOrden,
+      fechaInstalacion: normalizeDate(r.fechaInstalacion),
       createdAt: Number(r.createdAt) || Date.now()
     }));
   }catch(e){ showToast('No se pudo cargar desde Google Sheets.'); gestiones = []; }
@@ -556,10 +597,28 @@ function resetForm(){
   document.getElementById('f-estado').value = 'pendiente';
   document.getElementById('f-proxima').value = '';
   document.getElementById('f-comentario').value = '';
+  document.getElementById('f-fechaCierre').value = '';
+  document.getElementById('f-fechaInstalacion').value = '';
+  document.getElementById('f-numeroOrden').value = '';
   document.getElementById('f-status').textContent = '';
-  ['grp-ejecutivo','grp-nombre','grp-telefono','grp-proxima','grp-comentario'].forEach(clearFieldError);
+  ['grp-ejecutivo','grp-nombre','grp-telefono','grp-proxima','grp-comentario','grp-fechaCierre','grp-fechaInstalacion'].forEach(clearFieldError);
+  updateEstadoFields();
 }
 document.getElementById('btnLimpiar').addEventListener('click', resetForm);
+
+function updateEstadoFields(){
+  const estado = document.getElementById('f-estado').value;
+  const showCierre = (estado==='cerrado');
+  const showInstalacion = (estado==='emitido');
+  const showOrden = (estado==='emitido');
+  document.getElementById('grp-fechaCierre').style.display = showCierre ? '' : 'none';
+  document.getElementById('grp-fechaInstalacion').style.display = showInstalacion ? '' : 'none';
+  document.getElementById('grp-numeroOrden').style.display = showOrden ? '' : 'none';
+  if(showCierre && !document.getElementById('f-fechaCierre').value){
+    document.getElementById('f-fechaCierre').value = todayISO();
+  }
+}
+document.getElementById('f-estado').addEventListener('change', updateEstadoFields);
 
 document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   const ejecutivo = document.getElementById('f-ejecutivo').value;
@@ -572,14 +631,19 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   const estado = document.getElementById('f-estado').value;
   const proxima = document.getElementById('f-proxima').value;
   const comentario = document.getElementById('f-comentario').value.trim();
+  const fechaCierre = document.getElementById('f-fechaCierre').value;
+  const fechaInstalacion = document.getElementById('f-fechaInstalacion').value;
+  const numeroOrden = document.getElementById('f-numeroOrden').value.trim();
 
   let valid = true;
-  ['grp-ejecutivo','grp-nombre','grp-telefono','grp-proxima','grp-comentario'].forEach(clearFieldError);
+  ['grp-ejecutivo','grp-nombre','grp-telefono','grp-proxima','grp-comentario','grp-fechaCierre','grp-fechaInstalacion'].forEach(clearFieldError);
   if(!ejecutivo){ setFieldError('grp-ejecutivo'); valid=false; }
   if(!nombre){ setFieldError('grp-nombre'); valid=false; }
   if(!telefono){ setFieldError('grp-telefono'); valid=false; }
   if(!proxima){ setFieldError('grp-proxima'); valid=false; }
   if(!comentario){ setFieldError('grp-comentario'); valid=false; }
+  if(estado==='cerrado' && !fechaCierre){ setFieldError('grp-fechaCierre'); valid=false; }
+  if(estado==='emitido' && !fechaInstalacion){ setFieldError('grp-fechaInstalacion'); valid=false; }
 
   if(!valid){
     document.getElementById('f-status').textContent = 'Completa los campos obligatorios.';
@@ -589,7 +653,11 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
 
   const record = {
     id: uid(), ejecutivo, fecha: todayISO(), nombre, rut, telefono, direccion, comuna,
-    producto, estado, proximaFecha: proxima, comentario, createdAt: Date.now()
+    producto, estado, proximaFecha: proxima, comentario,
+    fechaCierre: estado==='cerrado' ? fechaCierre : '',
+    fechaInstalacion: estado==='emitido' ? fechaInstalacion : '',
+    numeroOrden: estado==='emitido' ? numeroOrden : '',
+    createdAt: Date.now()
   };
   document.getElementById('btnGuardar').disabled = true;
   document.getElementById('f-status').textContent = 'Guardando en Google Sheets...';
@@ -748,7 +816,7 @@ function renderContactabilidad(){
       <td><div class="pulse">${pulse}</div></td>
       <td class="mono" style="color:var(--text-dim);">${fmtDate(last.fecha)}</td>
       <td><span class="urg ${cls}">${txt}</span></td>
-      <td><button class="btn small btn-editar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" data-estado="${escapeHtml(last.estado)}" data-proxima="${escapeHtml(last.proximaFecha||'')}">Editar</button></td>
+      <td><button class="btn small btn-editar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" data-estado="${escapeHtml(last.estado)}" data-proxima="${escapeHtml(last.proximaFecha||'')}" data-fechacierre="${escapeHtml(last.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(last.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(last.numeroOrden||'')}">Editar</button></td>
     </tr>`;
   }).join('');
 }
@@ -763,18 +831,31 @@ function latestPerClient(){
 }
 
 function renderAlertas(){
-  let latest = latestPerClient().filter(g=>g.estado!=='cerrado' && g.estado!=='perdido');
+  let latest = latestPerClient().filter(g=>g.estado!=='cerrado' && g.estado!=='emitido' && g.estado!=='perdido');
   if(LOCKED_EXEC) latest = latest.filter(g=>g.ejecutivo===LOCKED_EXEC);
   const vencidos = latest.filter(g=>daysDiff(g.proximaFecha)<0).sort((a,b)=>daysDiff(a.proximaFecha)-daysDiff(b.proximaFecha));
   const hoy = latest.filter(g=>daysDiff(g.proximaFecha)===0);
 
   const vBox = document.getElementById('alertVencidos');
   document.getElementById('alertVencidosEmpty').style.display = vencidos.length? 'none':'block';
-  vBox.innerHTML = vencidos.map(g=>alertCardHtml(g,true)).join('');
+  vBox.innerHTML = vencidos.map(g=>alertCardHtml(g,true,'proximaFecha')).join('');
 
   const hBox = document.getElementById('alertHoy');
   document.getElementById('alertHoyEmpty').style.display = hoy.length? 'none':'block';
-  hBox.innerHTML = hoy.map(g=>alertCardHtml(g,false)).join('');
+  hBox.innerHTML = hoy.map(g=>alertCardHtml(g,false,'proximaFecha')).join('');
+
+  let instalaciones = latestPerClient().filter(g=>g.estado==='emitido' && g.fechaInstalacion);
+  if(LOCKED_EXEC) instalaciones = instalaciones.filter(g=>g.ejecutivo===LOCKED_EXEC);
+  const instalVencidas = instalaciones.filter(g=>daysDiff(g.fechaInstalacion)<0).sort((a,b)=>daysDiff(a.fechaInstalacion)-daysDiff(b.fechaInstalacion));
+  const instalHoy = instalaciones.filter(g=>daysDiff(g.fechaInstalacion)===0);
+
+  const ivBox = document.getElementById('alertInstalVencidas');
+  document.getElementById('alertInstalVencidasEmpty').style.display = instalVencidas.length? 'none':'block';
+  ivBox.innerHTML = instalVencidas.map(g=>alertCardHtml(g,true,'fechaInstalacion')).join('');
+
+  const ihBox = document.getElementById('alertInstalHoy');
+  document.getElementById('alertInstalHoyEmpty').style.display = instalHoy.length? 'none':'block';
+  ihBox.innerHTML = instalHoy.map(g=>alertCardHtml(g,false,'fechaInstalacion')).join('');
 
   document.querySelectorAll('.alert-gestionar').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -799,37 +880,58 @@ function renderAlertas(){
   });
 
   const badge = document.getElementById('alertBadge');
-  const totalAlert = vencidos.length + hoy.length;
+  const totalAlert = vencidos.length + hoy.length + instalVencidas.length + instalHoy.length;
   badge.style.display = totalAlert? 'inline-block':'none';
   badge.textContent = totalAlert;
 }
 
-function alertCardHtml(g, vencido){
-  const d = daysDiff(g.proximaFecha);
+function alertCardHtml(g, vencido, dateField){
+  const d = daysDiff(g[dateField]);
   const urg = vencido ? `<span class="urg vencido">Atrasado ${Math.abs(d)}d</span>` : `<span class="urg hoy">Hoy</span>`;
+  const metaLine = dateField==='proximaFecha'
+    ? `${escapeHtml(g.ejecutivo)} · ${escapeHtml(g.producto)} · último contacto ${fmtDate(g.fecha)}${g.telefono? ' · '+escapeHtml(g.telefono):''}`
+    : `${escapeHtml(g.ejecutivo)} · ${escapeHtml(g.producto)} · instalación ${fmtDate(g.fechaInstalacion)}${g.numeroOrden? ' · N° '+escapeHtml(g.numeroOrden):''}`;
+  const gestionarBtn = dateField==='proximaFecha'
+    ? `<button class="btn small primary alert-gestionar" data-nombre="${escapeHtml(g.nombre)}" data-ejecutivo="${escapeHtml(g.ejecutivo)}" data-telefono="${escapeHtml(g.telefono||'')}" data-rut="${escapeHtml(g.rut||'')}" data-producto="${escapeHtml(g.producto||'')}">Gestionar</button>`
+    : '';
   return `<div class="alert-card ${vencido?'vencido':''}">
     <div class="ai">
       <div class="an">${escapeHtml(g.nombre)} <span class="chip ${g.estado}" style="margin-left:6px;">${EST_MAP[g.estado].label}</span></div>
-      <div class="am">${escapeHtml(g.ejecutivo)} · ${escapeHtml(g.producto)} · último contacto ${fmtDate(g.fecha)}${g.telefono? ' · '+escapeHtml(g.telefono):''}</div>
+      <div class="am">${metaLine}</div>
     </div>
     ${urg}
     <div class="actions">
-      <button class="btn small btn-editar" data-id="${escapeHtml(g.id)}" data-nombre="${escapeHtml(g.nombre)}" data-estado="${escapeHtml(g.estado)}" data-proxima="${escapeHtml(g.proximaFecha||'')}">Editar</button>
-      <button class="btn small primary alert-gestionar" data-nombre="${escapeHtml(g.nombre)}" data-ejecutivo="${escapeHtml(g.ejecutivo)}" data-telefono="${escapeHtml(g.telefono||'')}" data-rut="${escapeHtml(g.rut||'')}" data-producto="${escapeHtml(g.producto||'')}">Gestionar</button>
+      <button class="btn small btn-editar" data-id="${escapeHtml(g.id)}" data-nombre="${escapeHtml(g.nombre)}" data-estado="${escapeHtml(g.estado)}" data-proxima="${escapeHtml(g.proximaFecha||'')}" data-fechacierre="${escapeHtml(g.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(g.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(g.numeroOrden||'')}">Editar</button>
+      ${gestionarBtn}
     </div>
   </div>`;
 }
 
 function updateAlertBadgeQuiet(){
-  let latest = latestPerClient().filter(g=>g.estado!=='cerrado' && g.estado!=='perdido');
+  let latest = latestPerClient().filter(g=>g.estado!=='cerrado' && g.estado!=='emitido' && g.estado!=='perdido');
   if(LOCKED_EXEC) latest = latest.filter(g=>g.ejecutivo===LOCKED_EXEC);
   const total = latest.filter(g=>daysDiff(g.proximaFecha)<=0).length;
+  let instalaciones = latestPerClient().filter(g=>g.estado==='emitido' && g.fechaInstalacion);
+  if(LOCKED_EXEC) instalaciones = instalaciones.filter(g=>g.ejecutivo===LOCKED_EXEC);
+  const totalInstal = instalaciones.filter(g=>daysDiff(g.fechaInstalacion)<=0).length;
   const badge = document.getElementById('alertBadge');
-  badge.style.display = total? 'inline-block':'none';
-  badge.textContent = total;
+  const grandTotal = total + totalInstal;
+  badge.style.display = grandTotal? 'inline-block':'none';
+  badge.textContent = grandTotal;
 }
 
 let editTargetId = null;
+
+function updateEditFields(){
+  const estado = document.getElementById('edit-estado').value;
+  document.getElementById('edit-grp-fechaCierre').style.display = (estado==='cerrado') ? '' : 'none';
+  document.getElementById('edit-grp-fechaInstalacion').style.display = (estado==='emitido') ? '' : 'none';
+  document.getElementById('edit-grp-numeroOrden').style.display = (estado==='emitido') ? '' : 'none';
+  if(estado==='cerrado' && !document.getElementById('edit-fechaCierre').value){
+    document.getElementById('edit-fechaCierre').value = todayISO();
+  }
+}
+document.getElementById('edit-estado').addEventListener('change', updateEditFields);
 
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('.btn-editar');
@@ -838,6 +940,10 @@ document.addEventListener('click', (e)=>{
   document.getElementById('editClienteName').textContent = btn.dataset.nombre;
   document.getElementById('edit-estado').value = btn.dataset.estado || 'pendiente';
   document.getElementById('edit-proxima').value = btn.dataset.proxima || '';
+  document.getElementById('edit-fechaCierre').value = btn.dataset.fechacierre || '';
+  document.getElementById('edit-fechaInstalacion').value = btn.dataset.fechainstalacion || '';
+  document.getElementById('edit-numeroOrden').value = btn.dataset.numeroorden || '';
+  updateEditFields();
   document.getElementById('modalEdit').classList.add('open');
 });
 document.getElementById('modalEditCancel').addEventListener('click', ()=>{
@@ -846,17 +952,32 @@ document.getElementById('modalEditCancel').addEventListener('click', ()=>{
 document.getElementById('modalEditSave').addEventListener('click', async ()=>{
   const estado = document.getElementById('edit-estado').value;
   const proxima = document.getElementById('edit-proxima').value;
+  const fechaCierre = document.getElementById('edit-fechaCierre').value;
+  const fechaInstalacion = document.getElementById('edit-fechaInstalacion').value;
+  const numeroOrden = document.getElementById('edit-numeroOrden').value.trim();
   if(!proxima){
     showToast('Selecciona la fecha de próximo contacto.');
     return;
   }
+  if(estado==='cerrado' && !fechaCierre){
+    showToast('Selecciona el día en que se cerró.');
+    return;
+  }
+  if(estado==='emitido' && !fechaInstalacion){
+    showToast('Selecciona la fecha de instalación.');
+    return;
+  }
   document.getElementById('modalEditSave').disabled = true;
+  const payload = {action:'update', id: editTargetId, estado, proximaFecha: proxima};
+  payload.fechaCierre = (estado==='cerrado') ? fechaCierre : '';
+  payload.fechaInstalacion = (estado==='emitido') ? fechaInstalacion : '';
+  payload.numeroOrden = estado==='emitido' ? numeroOrden : '';
   try{
     await fetch(SCRIPT_URL, {
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'update', id: editTargetId, estado, proximaFecha: proxima})
+      body: JSON.stringify(payload)
     });
   }catch(e){}
   document.getElementById('modalEditSave').disabled = false;
