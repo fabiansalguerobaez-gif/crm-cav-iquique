@@ -186,7 +186,7 @@ tr:hover td{background:var(--surface-2);}
 .mini-rank-row .mrn{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;}
 .mini-rank-row .mrv{font-family:'JetBrains Mono',monospace;font-weight:700;}
 .metas-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;}
-select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:13px;}
+select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;}
 
 .pulse{display:flex;align-items:center;gap:4px;}
 .pdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
@@ -433,7 +433,10 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
           <h2>Metas</h2>
           <p id="metasSubtitle">Cargando...</p>
         </div>
-        <select id="metasExecSelect"></select>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="month" id="metasMonthSelect">
+          <select id="metasExecSelect"></select>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
@@ -600,6 +603,7 @@ const META_INDIVIDUAL = 13;
 const META_DIARIA_INDIVIDUAL = 6;
 const CERRADAS = new Set(['cerrado','emitido']);
 let metasExecSel = LOCKED_EXEC || 'all';
+let metasMonthSel = null;
 function pad2(n){ return String(n).padStart(2,'0'); }
 function daysInMonth(year, monthIdx){ return new Date(year, monthIdx+1, 0).getDate(); }
 function dateForCierre(g){ return g.fechaCierre || g.fecha; }
@@ -1102,26 +1106,36 @@ function populateMetasExecSelect(){
   if(LOCKED_EXEC){
     sel.innerHTML = `<option value="${escapeHtml(LOCKED_EXEC)}">${escapeHtml(LOCKED_EXEC)}</option>`;
     sel.disabled = true;
-    return;
+  }else{
+    sel.innerHTML = '<option value="all">Equipo completo</option>' + EJECUTIVOS.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
+    sel.value = metasExecSel;
+    sel.addEventListener('change', ()=>{ metasExecSel = sel.value; renderMetas(); });
   }
-  sel.innerHTML = '<option value="all">Equipo completo</option>' + EJECUTIVOS.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
-  sel.value = metasExecSel;
-  sel.addEventListener('change', ()=>{ metasExecSel = sel.value; renderMetas(); });
+  const now = new Date();
+  metasMonthSel = now.getFullYear() + '-' + pad2(now.getMonth()+1);
+  const monthInput = document.getElementById('metasMonthSelect');
+  monthInput.value = metasMonthSel;
+  monthInput.addEventListener('change', ()=>{
+    if(monthInput.value){ metasMonthSel = monthInput.value; renderMetas(); }
+  });
 }
 
 function renderMetas(){
   const now = new Date();
-  const year = now.getFullYear(), monthIdx = now.getMonth(), dayOfMonth = now.getDate();
+  const [selYearStr, selMonthStr] = (metasMonthSel || (now.getFullYear()+'-'+pad2(now.getMonth()+1))).split('-');
+  const year = Number(selYearStr), monthIdx = Number(selMonthStr)-1;
   const totalDiasMes = daysInMonth(year, monthIdx);
+  const isCurrentMonth = (year===now.getFullYear() && monthIdx===now.getMonth());
+  const dayOfMonth = isCurrentMonth ? now.getDate() : totalDiasMes;
   const monthPrefix = year + '-' + pad2(monthIdx+1);
   const selectedExec = metasExecSel;
   const execsInScope = selectedExec==='all' ? EJECUTIVOS : [selectedExec];
 
-  document.getElementById('metasSubtitle').textContent = selectedExec==='all'
+  document.getElementById('metasSubtitle').textContent = (selectedExec==='all'
     ? 'Vista del equipo completo — ' + EJECUTIVOS.length + ' ejecutivos activos'
-    : 'Vista individual — ' + selectedExec;
+    : 'Vista individual — ' + selectedExec) + ' · ' + monthPrefix + (isCurrentMonth ? ' (mes en curso)' : '');
 
-  const cerradasMes = gestiones.filter(g => CERRADAS.has(g.estado) && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo));
+  const cerradasMes = gestiones.filter(g => g.estado==='cerrado' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo));
   const ventasActuales = cerradasMes.length;
   const meta = selectedExec==='all' ? META_INDIVIDUAL * EJECUTIVOS.length : META_INDIVIDUAL;
   const ritmo = dayOfMonth / 30;
@@ -1142,31 +1156,43 @@ function renderMetas(){
   const cardEj = document.getElementById('cardPorEjecutivo');
   if(selectedExec==='all'){
     cardEj.style.display = '';
-    const maxVal = Math.max(META_INDIVIDUAL, ...EJECUTIVOS.map(ex=>gestiones.filter(g=>CERRADAS.has(g.estado)&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&g.ejecutivo===ex).length)) * 1.15;
-    document.getElementById('barsEjecutivos').innerHTML = EJECUTIVOS.map(ex=>{
-      const count = gestiones.filter(g=>CERRADAS.has(g.estado)&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&g.ejecutivo===ex).length;
-      const pct = Math.min(100, count/maxVal*100);
+    const perExec = EJECUTIVOS.map(ex=>{
+      const count = gestiones.filter(g=>g.estado==='cerrado'&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&g.ejecutivo===ex).length;
+      const proy = ritmo>0 ? Math.round(count/ritmo) : count;
+      return {ex, count, proy};
+    });
+    const maxVal = Math.max(META_INDIVIDUAL, ...perExec.map(p=>Math.max(p.count,p.proy))) * 1.15;
+    document.getElementById('barsEjecutivos').innerHTML = perExec.map(({ex,count,proy})=>{
+      const proyExtra = Math.max(0, proy-count);
+      const pctActual = Math.min(100, count/maxVal*100);
+      const pctExtra = Math.min(100-pctActual, proyExtra/maxVal*100);
       const metaPct = Math.min(100, META_INDIVIDUAL/maxVal*100);
-      const color = count>=META_INDIVIDUAL ? 'var(--cotizacion)' : 'var(--cerrado)';
       return `<div class="bar-row">
         <div class="bl">${escapeHtml(ex)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};"></div><div class="meta-line" style="left:${metaPct}%;"></div></div>
-        <div class="bn">${count}/${META_INDIVIDUAL}</div>
+        <div class="bar-track">
+          <div style="position:absolute;top:0;height:100%;left:0;width:${pctActual}%;background:var(--cerrado);border-radius:4px;"></div>
+          <div style="position:absolute;top:0;height:100%;left:${pctActual}%;width:${pctExtra}%;background:var(--emitido);opacity:.5;border-radius:4px;"></div>
+          <div class="meta-line" style="left:${metaPct}%;"></div>
+        </div>
+        <div class="bn">${count} / ${proy}</div>
       </div>`;
-    }).join('') + `<div class="legend"><span><span class="dot" style="background:var(--accent);"></span>Meta individual (${META_INDIVIDUAL})</span></div>`;
+    }).join('') + `<div class="legend">
+        <span><span class="dot" style="background:var(--cerrado);"></span>Cerradas</span>
+        <span><span class="dot" style="background:var(--emitido);"></span>Proyectadas a cerrar${isCurrentMonth?'':' (mes ya terminado)'}</span>
+        <span><span class="dot" style="background:var(--accent);"></span>Meta individual (${META_INDIVIDUAL})</span>
+      </div>`;
   }else{
     cardEj.style.display = 'none';
   }
 
   const metaDiaria = selectedExec==='all' ? META_DIARIA_INDIVIDUAL * EJECUTIVOS.length : META_DIARIA_INDIVIDUAL;
   const days = [];
-  for(let i=20;i>=0;i--){
-    const d = new Date(); d.setDate(d.getDate()-i);
-    days.push(d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()));
+  for(let d=1; d<=dayOfMonth; d++){
+    days.push(year+'-'+pad2(monthIdx+1)+'-'+pad2(d));
   }
   const dailyCounts = days.map(iso => gestiones.filter(g=>CERRADAS.has(g.estado)&&dateForCierre(g)===iso&&execsInScope.includes(g.ejecutivo)).length);
-  const maxDaily = Math.max(metaDiaria, ...dailyCounts) * 1.2;
-  document.getElementById('barsDiarios').innerHTML = days.map((iso,idx)=>{
+  const maxDaily = Math.max(metaDiaria, ...dailyCounts, 1) * 1.2;
+  document.getElementById('barsDiarios').innerHTML = (days.length ? days.map((iso,idx)=>{
     const count = dailyCounts[idx];
     const pct = Math.min(100, count/maxDaily*100);
     const metaPct = Math.min(100, metaDiaria/maxDaily*100);
@@ -1177,7 +1203,7 @@ function renderMetas(){
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};"></div><div class="meta-line" style="left:${metaPct}%;"></div></div>
       <div class="bn">${count}</div>
     </div>`;
-  }).join('') + `<div class="legend">
+  }).join('') : '<div class="empty">Sin días transcurridos en este mes.</div>') + `<div class="legend">
       <span><span class="dot" style="background:var(--cotizacion);"></span>Meta cumplida</span>
       <span><span class="dot" style="background:var(--pendiente);"></span>Hoy</span>
       <span><span class="dot" style="background:var(--perdido);"></span>Bajo la meta</span>
