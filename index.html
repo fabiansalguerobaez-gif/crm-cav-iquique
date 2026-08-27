@@ -244,6 +244,7 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
       <div class="nav-item" data-view="contactabilidad"><span class="nav-icon">∿</span>Contactabilidad</div>
       <div class="nav-item" data-view="alertas"><span class="nav-icon">!</span>Alertas<span class="nav-badge" id="alertBadge" style="display:none;">0</span></div>
       <div class="nav-item" data-view="metas"><span class="nav-icon">◆</span>Metas</div>
+      <div class="nav-item" data-view="eliminadas"><span class="nav-icon">🗑</span>Eliminadas</div>
     </div>
     <div class="exec-box">
       <label id="execBoxLabel">Ejecutivo activo</label>
@@ -325,7 +326,7 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
             <input type="text" id="f-numeroOrden" placeholder="Ej: OR-10293">
           </div>
           <div class="field" id="grp-proxima">
-            <label>Próximo contacto<span class="req">*</span></label>
+            <label>Próximo contacto<span class="req" id="proxima-req">*</span></label>
             <input type="date" id="f-proxima">
             <span class="err-msg">Selecciona la fecha del próximo contacto.</span>
           </div>
@@ -398,7 +399,7 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
       <div class="tabs-filter" id="ctExecFilter"></div>
       <div class="card">
         <table>
-          <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Últimas gestiones</th><th>Último contacto</th><th>Próximo</th><th></th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Estado</th><th>Últimas gestiones</th><th>Último contacto</th><th>Próximo</th><th></th></tr></thead>
           <tbody id="ctTabla"></tbody>
         </table>
         <div class="empty" id="ctEmpty" style="display:none;">No hay clientes registrados todavía.</div>
@@ -502,6 +503,20 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
       </div>
     </div>
 
+    <div class="view" id="view-eliminadas">
+      <div class="page-head">
+        <h2>Gestiones eliminadas</h2>
+        <p>Registros eliminados desde Contactabilidad, con el motivo indicado.</p>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Estado (al eliminar)</th><th>Motivo</th><th>Eliminado el</th></tr></thead>
+          <tbody id="eliminadasTabla"></tbody>
+        </table>
+        <div class="empty" id="eliminadasEmpty" style="display:none;">No hay gestiones eliminadas.</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -545,6 +560,24 @@ select#metasExecSelect{background:var(--surface-2);border:1px solid var(--border
   </div>
 </div>
 
+<div class="mini-modal" id="modalDelete">
+  <div class="box">
+    <h3>Eliminar gestión</h3>
+    <div class="field">
+      <label>Cliente</label>
+      <div class="mono" id="deleteClienteName" style="padding:8px 0;color:var(--text-dim);"></div>
+    </div>
+    <div class="field">
+      <label>Motivo de eliminación<span class="req">*</span></label>
+      <textarea id="delete-motivo" placeholder="Ej: registro duplicado, cliente ingresado por error..." style="min-height:70px;"></textarea>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn ghost small" id="modalDeleteCancel">Cancelar</button>
+      <button class="btn primary small" id="modalDeleteConfirm" style="background:var(--perdido);border-color:var(--perdido);color:#fff;">Eliminar gestión</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -577,6 +610,7 @@ function proyeccionColor(v){
 }
 
 let gestiones = [];
+let eliminadas = [];
 let efRange = 30;
 let efExecSel = 'all';
 let ctExecSel = 'all';
@@ -633,20 +667,26 @@ async function loadData(){
   if(!sheetsConfigured()){
     showToast('Falta configurar la URL de Google Sheets en el código.');
     gestiones = [];
+    eliminadas = [];
     return;
   }
   try{
     const raw = await jsonp(SCRIPT_URL);
-    gestiones = raw.map(r=>({
+    const mapped = raw.map(r=>({
       id: r.id, ejecutivo: r.ejecutivo, fecha: normalizeDate(r.fecha),
       nombre: r.nombre, rut: r.rut, telefono: r.telefono, direccion: r.direccion,
       comuna: r.comuna, producto: r.producto, estado: r.estado,
       proximaFecha: normalizeDate(r.proximaFecha), comentario: r.comentario,
       fechaCierre: normalizeDate(r.fechaCierre), numeroOrden: r.numeroOrden,
       fechaInstalacion: normalizeDate(r.fechaInstalacion),
-      createdAt: Number(r.createdAt) || Date.now()
+      createdAt: Number(r.createdAt) || Date.now(),
+      eliminado: String(r.eliminado||'')==='true',
+      motivoEliminacion: r.motivoEliminacion,
+      fechaEliminacion: normalizeDate(r.fechaEliminacion)
     }));
-  }catch(e){ showToast('No se pudo cargar desde Google Sheets.'); gestiones = []; }
+    gestiones = mapped.filter(g=>!g.eliminado);
+    eliminadas = mapped.filter(g=>g.eliminado).sort((a,b)=>b.createdAt-a.createdAt);
+  }catch(e){ showToast('No se pudo cargar desde Google Sheets.'); gestiones = []; eliminadas = []; }
 }
 async function saveGestion(record){
   if(!sheetsConfigured()){
@@ -684,6 +724,7 @@ async function switchView(view){
   if(view==='contactabilidad'){ showToast('Actualizando...'); await loadData(); renderContactabilidad(); }
   if(view==='alertas'){ showToast('Actualizando...'); await loadData(); renderAlertas(); }
   if(view==='metas'){ showToast('Actualizando...'); await loadData(); renderMetas(); }
+  if(view==='eliminadas'){ showToast('Actualizando...'); await loadData(); renderEliminadas(); }
 }
 document.querySelectorAll('.nav-item').forEach(item=>{
   item.addEventListener('click', ()=>switchView(item.dataset.view));
@@ -731,6 +772,7 @@ function updateEstadoFields(){
   document.getElementById('grp-fechaCierre').style.display = showCierre ? '' : 'none';
   document.getElementById('grp-fechaInstalacion').style.display = showInstalacion ? '' : 'none';
   document.getElementById('grp-numeroOrden').style.display = showOrden ? '' : 'none';
+  document.getElementById('proxima-req').style.display = estado==='perdido' ? 'none' : '';
   if(showCierre && !document.getElementById('f-fechaCierre').value){
     document.getElementById('f-fechaCierre').value = todayISO();
   }
@@ -757,7 +799,7 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   if(!ejecutivo){ setFieldError('grp-ejecutivo'); valid=false; }
   if(!nombre){ setFieldError('grp-nombre'); valid=false; }
   if(!telefono){ setFieldError('grp-telefono'); valid=false; }
-  if(!proxima){ setFieldError('grp-proxima'); valid=false; }
+  if(estado!=='perdido' && !proxima){ setFieldError('grp-proxima'); valid=false; }
   if(!comentario){ setFieldError('grp-comentario'); valid=false; }
   if(estado==='cerrado' && !fechaCierre){ setFieldError('grp-fechaCierre'); valid=false; }
   if(estado==='emitido' && !fechaInstalacion){ setFieldError('grp-fechaInstalacion'); valid=false; }
@@ -934,10 +976,14 @@ function renderContactabilidad(){
       <td>${escapeHtml(last.nombre)}</td>
       <td style="color:var(--text-dim);">${escapeHtml(last.ejecutivo)}</td>
       <td style="color:var(--text-dim);">${escapeHtml(last.producto)}</td>
+      <td><span class="chip ${last.estado}">${EST_MAP[last.estado].label}</span></td>
       <td><div class="pulse">${pulse}</div></td>
       <td class="mono" style="color:var(--text-dim);">${fmtDate(last.fecha)}</td>
       <td><span class="urg ${cls}">${txt}</span></td>
-      <td><button class="btn small btn-editar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" data-estado="${escapeHtml(last.estado)}" data-proxima="${escapeHtml(last.proximaFecha||'')}" data-fechacierre="${escapeHtml(last.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(last.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(last.numeroOrden||'')}">Editar</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn small btn-editar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" data-estado="${escapeHtml(last.estado)}" data-proxima="${escapeHtml(last.proximaFecha||'')}" data-fechacierre="${escapeHtml(last.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(last.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(last.numeroOrden||'')}">Editar</button>
+        <button class="btn small btn-eliminar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" style="margin-left:4px;">Eliminar</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -1203,6 +1249,63 @@ function renderMetas(){
   </tr>`).join('');
 }
 
+function renderEliminadas(){
+  const tbody = document.getElementById('eliminadasTabla');
+  let list = eliminadas;
+  if(LOCKED_EXEC) list = list.filter(g=>g.ejecutivo===LOCKED_EXEC);
+  document.getElementById('eliminadasEmpty').style.display = list.length? 'none':'block';
+  tbody.innerHTML = list.map(g=>`<tr>
+    <td>${escapeHtml(g.nombre)}</td>
+    <td style="color:var(--text-dim);">${escapeHtml(g.ejecutivo)}</td>
+    <td style="color:var(--text-dim);">${escapeHtml(g.producto)}</td>
+    <td><span class="chip ${g.estado}">${EST_MAP[g.estado] ? EST_MAP[g.estado].label : escapeHtml(g.estado)}</span></td>
+    <td style="color:var(--text-dim);">${escapeHtml(g.motivoEliminacion||'—')}</td>
+    <td class="mono" style="color:var(--text-dim);">${fmtDate(g.fechaEliminacion)}</td>
+  </tr>`).join('');
+}
+
+let deleteTargetId = null;
+
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('.btn-eliminar');
+  if(!btn) return;
+  deleteTargetId = btn.dataset.id;
+  document.getElementById('deleteClienteName').textContent = btn.dataset.nombre;
+  document.getElementById('delete-motivo').value = '';
+  document.getElementById('modalDelete').classList.add('open');
+});
+document.getElementById('modalDeleteCancel').addEventListener('click', ()=>{
+  document.getElementById('modalDelete').classList.remove('open');
+});
+document.getElementById('modalDeleteConfirm').addEventListener('click', async ()=>{
+  const motivo = document.getElementById('delete-motivo').value.trim();
+  if(!motivo){
+    showToast('Ingresa el motivo de eliminación.');
+    return;
+  }
+  document.getElementById('modalDeleteConfirm').disabled = true;
+  try{
+    await fetch(SCRIPT_URL, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'delete', id: deleteTargetId, motivo, fechaEliminacion: todayISO()})
+    });
+  }catch(e){}
+  document.getElementById('modalDeleteConfirm').disabled = false;
+  document.getElementById('modalDelete').classList.remove('open');
+  showToast('Gestión eliminada.');
+  await loadData();
+  const activeView = document.querySelector('.nav-item.active').dataset.view;
+  if(activeView==='hoy') renderHoy();
+  if(activeView==='efectividad') renderEfectividad();
+  if(activeView==='contactabilidad') renderContactabilidad();
+  if(activeView==='alertas') renderAlertas();
+  if(activeView==='metas') renderMetas();
+  if(activeView==='eliminadas') renderEliminadas();
+  updateAlertBadgeQuiet();
+});
+
 let editTargetId = null;
 
 function updateEditFields(){
@@ -1238,7 +1341,7 @@ document.getElementById('modalEditSave').addEventListener('click', async ()=>{
   const fechaCierre = document.getElementById('edit-fechaCierre').value;
   const fechaInstalacion = document.getElementById('edit-fechaInstalacion').value;
   const numeroOrden = document.getElementById('edit-numeroOrden').value.trim();
-  if(!proxima){
+  if(estado!=='perdido' && !proxima){
     showToast('Selecciona la fecha de próximo contacto.');
     return;
   }
