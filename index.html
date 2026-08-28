@@ -453,7 +453,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 
       <div class="card" style="margin-bottom:18px;">
         <div class="section-title" style="margin-top:0;">Meta de ingresos diarios (6 por ejecutivo)</div>
-        <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Últimos 21 días. La línea marca la meta diaria.</p>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Todas las gestiones ingresadas ese día (cualquier estado), excluye Móvil. La línea marca la meta diaria.</p>
         <div id="barsDiarios"></div>
       </div>
 
@@ -1231,7 +1231,7 @@ function renderMetas(){
   for(let d=1; d<=dayOfMonth; d++){
     days.push(year+'-'+pad2(monthIdx+1)+'-'+pad2(d));
   }
-  const dailyCounts = days.map(iso => gestiones.filter(g=>CERRADAS.has(g.estado)&&g.producto!=='MOVIL'&&dateForCierre(g)===iso&&execsInScope.includes(g.ejecutivo)).length);
+  const dailyCounts = days.map(iso => gestiones.filter(g=>g.producto!=='MOVIL'&&g.fecha===iso&&execsInScope.includes(g.ejecutivo)).length);
   const maxDaily = Math.max(metaDiaria, ...dailyCounts, 1) * 1.2;
   document.getElementById('barsDiarios').innerHTML = (days.length ? days.map((iso,idx)=>{
     const count = dailyCounts[idx];
@@ -1260,9 +1260,9 @@ function renderMetas(){
     const diasSemana = w.end - w.start + 1;
     const metaSemana = metaDiaria * diasSemana;
     const count = gestiones.filter(g=>{
-      if(!CERRADAS.has(g.estado) || g.producto==='MOVIL' || !dateForCierre(g) || !dateForCierre(g).startsWith(monthPrefix)) return false;
+      if(g.producto==='MOVIL' || !g.fecha || !g.fecha.startsWith(monthPrefix)) return false;
       if(!execsInScope.includes(g.ejecutivo)) return false;
-      const d = Number(dateForCierre(g).slice(8,10));
+      const d = Number(g.fecha.slice(8,10));
       return d>=w.start && d<=w.end;
     }).length;
     const pct = metaSemana>0 ? (count/metaSemana*100) : 0;
@@ -1274,7 +1274,7 @@ function renderMetas(){
   }).join('') + (weeks.length? `<div class="legend"><span class="mono" style="color:var(--text-faint);">Meta semana = ${metaDiaria} × días</span></div>` : '<div class="empty">Sin semanas transcurridas todavía.</div>');
 
   const metaMes = metaDiaria * totalDiasMes;
-  const ventasMesDiaria = gestiones.filter(g=>CERRADAS.has(g.estado)&&g.producto!=='MOVIL'&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&execsInScope.includes(g.ejecutivo)).length;
+  const ventasMesDiaria = gestiones.filter(g=>g.producto!=='MOVIL'&&g.fecha&&g.fecha.startsWith(monthPrefix)&&execsInScope.includes(g.ejecutivo)).length;
   const pctMes = metaMes>0 ? (ventasMesDiaria/metaMes*100) : 0;
   document.getElementById('mesCumplimiento').innerHTML = `
     <div class="stat">
