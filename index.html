@@ -487,6 +487,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
 
       <div class="card" style="margin-bottom:18px;">
+        <div class="section-title" style="margin-top:0;">Ventas móviles cerradas por ejecutiva</div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Aparte de las metas anteriores — solo producto Móvil, estado Cerrado, mes seleccionado.</p>
+        <div id="rankMoviles"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
         <div class="section-title" style="margin-top:0;">Proyección de ventas por ejecutiva <span style="font-weight:400;text-transform:none;color:var(--text-faint);">(excluye Móvil)</span></div>
         <div id="barsProyeccion"></div>
         <div class="legend">
@@ -1135,7 +1141,7 @@ function renderMetas(){
     ? 'Vista del equipo completo — ' + EJECUTIVOS.length + ' ejecutivos activos'
     : 'Vista individual — ' + selectedExec) + ' · ' + monthPrefix + (isCurrentMonth ? ' (mes en curso)' : '');
 
-  const cerradasMes = gestiones.filter(g => g.estado==='cerrado' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo));
+  const cerradasMes = gestiones.filter(g => g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo));
   const ventasActuales = cerradasMes.length;
   const meta = selectedExec==='all' ? META_INDIVIDUAL * EJECUTIVOS.length : META_INDIVIDUAL;
   const ritmo = dayOfMonth / 30;
@@ -1157,7 +1163,7 @@ function renderMetas(){
   if(selectedExec==='all'){
     cardEj.style.display = '';
     const perExec = EJECUTIVOS.map(ex=>{
-      const count = gestiones.filter(g=>g.estado==='cerrado'&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&g.ejecutivo===ex).length;
+      const count = gestiones.filter(g=>g.estado==='cerrado'&&g.producto!=='MOVIL'&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&g.ejecutivo===ex).length;
       const proy = ritmo>0 ? Math.round(count/ritmo) : count;
       return {ex, count, proy};
     });
@@ -1190,7 +1196,7 @@ function renderMetas(){
   for(let d=1; d<=dayOfMonth; d++){
     days.push(year+'-'+pad2(monthIdx+1)+'-'+pad2(d));
   }
-  const dailyCounts = days.map(iso => gestiones.filter(g=>CERRADAS.has(g.estado)&&dateForCierre(g)===iso&&execsInScope.includes(g.ejecutivo)).length);
+  const dailyCounts = days.map(iso => gestiones.filter(g=>CERRADAS.has(g.estado)&&g.producto!=='MOVIL'&&dateForCierre(g)===iso&&execsInScope.includes(g.ejecutivo)).length);
   const maxDaily = Math.max(metaDiaria, ...dailyCounts, 1) * 1.2;
   document.getElementById('barsDiarios').innerHTML = (days.length ? days.map((iso,idx)=>{
     const count = dailyCounts[idx];
@@ -1219,7 +1225,7 @@ function renderMetas(){
     const diasSemana = w.end - w.start + 1;
     const metaSemana = metaDiaria * diasSemana;
     const count = gestiones.filter(g=>{
-      if(!CERRADAS.has(g.estado) || !dateForCierre(g) || !dateForCierre(g).startsWith(monthPrefix)) return false;
+      if(!CERRADAS.has(g.estado) || g.producto==='MOVIL' || !dateForCierre(g) || !dateForCierre(g).startsWith(monthPrefix)) return false;
       if(!execsInScope.includes(g.ejecutivo)) return false;
       const d = Number(dateForCierre(g).slice(8,10));
       return d>=w.start && d<=w.end;
@@ -1233,7 +1239,7 @@ function renderMetas(){
   }).join('') + (weeks.length? `<div class="legend"><span class="mono" style="color:var(--text-faint);">Meta semana = ${metaDiaria} × días</span></div>` : '<div class="empty">Sin semanas transcurridas todavía.</div>');
 
   const metaMes = metaDiaria * totalDiasMes;
-  const ventasMesDiaria = gestiones.filter(g=>CERRADAS.has(g.estado)&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&execsInScope.includes(g.ejecutivo)).length;
+  const ventasMesDiaria = gestiones.filter(g=>CERRADAS.has(g.estado)&&g.producto!=='MOVIL'&&dateForCierre(g)&&dateForCierre(g).startsWith(monthPrefix)&&execsInScope.includes(g.ejecutivo)).length;
   const pctMes = metaMes>0 ? (ventasMesDiaria/metaMes*100) : 0;
   document.getElementById('mesCumplimiento').innerHTML = `
     <div class="stat">
@@ -1260,6 +1266,15 @@ function renderMetas(){
   renderMiniRank('rankIngresados', countIngresados);
   renderMiniRank('rankEmitidas', countEmitidas);
   renderMiniRank('rankCerradas', countCerradas);
+
+  const countMoviles = {};
+  execsInScope.forEach(ex=>{ countMoviles[ex]=0; });
+  gestiones.forEach(g=>{
+    if(g.estado==='cerrado' && g.producto==='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)){
+      countMoviles[g.ejecutivo] = (countMoviles[g.ejecutivo]||0)+1;
+    }
+  });
+  renderMiniRank('rankMoviles', countMoviles);
 
   document.getElementById('barsProyeccion').innerHTML = execsInScope.map(ex=>{
     const count = gestiones.filter(g=>g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && g.ejecutivo===ex).length;
