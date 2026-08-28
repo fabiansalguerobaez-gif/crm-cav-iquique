@@ -531,37 +531,72 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 </div>
 
 <div class="mini-modal" id="modalEdit">
-  <div class="box">
+  <div class="box" style="width:480px;">
     <h3>Editar gestión</h3>
-    <div class="field">
-      <label>Cliente</label>
-      <div class="mono" id="editClienteName" style="padding:8px 0;color:var(--text-dim);"></div>
-    </div>
-    <div class="field">
-      <label>Estado</label>
-      <select id="edit-estado">
-        <option value="pendiente">Pendiente</option>
-        <option value="enviada_cotizacion">Enviada cotización</option>
-        <option value="cerrado">Cerrado</option>
-        <option value="emitido">Emitido</option>
-        <option value="perdido">Perdido</option>
-      </select>
-    </div>
-    <div class="field" id="edit-grp-fechaCierre" style="margin-top:12px;display:none;">
-      <label>Día en que se cerró</label>
-      <input type="date" id="edit-fechaCierre">
-    </div>
-    <div class="field" id="edit-grp-fechaInstalacion" style="margin-top:12px;display:none;">
-      <label>Fecha de instalación</label>
-      <input type="date" id="edit-fechaInstalacion">
-    </div>
-    <div class="field" id="edit-grp-numeroOrden" style="margin-top:12px;display:none;">
-      <label>Número de orden</label>
-      <input type="text" id="edit-numeroOrden" placeholder="Ej: OR-10293">
-    </div>
-    <div class="field" style="margin-top:12px;">
-      <label>Próximo contacto</label>
-      <input type="date" id="edit-proxima">
+    <div class="form-grid">
+      <div class="field">
+        <label>Ejecutivo<span class="req">*</span></label>
+        <select id="edit-ejecutivo"></select>
+      </div>
+      <div class="field">
+        <label>Nombre cliente<span class="req">*</span></label>
+        <input type="text" id="edit-nombre">
+      </div>
+      <div class="field">
+        <label>Rut cliente</label>
+        <input type="text" id="edit-rut">
+      </div>
+      <div class="field">
+        <label>Teléfono contacto<span class="req">*</span></label>
+        <input type="text" id="edit-telefono">
+      </div>
+      <div class="field">
+        <label>Dirección</label>
+        <input type="text" id="edit-direccion">
+      </div>
+      <div class="field">
+        <label>Comuna</label>
+        <input type="text" id="edit-comuna">
+      </div>
+      <div class="field">
+        <label>Producto</label>
+        <select id="edit-producto">
+          <option>NAKED</option>
+          <option>DUO</option>
+          <option>FMC</option>
+          <option>MOVIL</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select id="edit-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="enviada_cotizacion">Enviada cotización</option>
+          <option value="cerrado">Cerrado</option>
+          <option value="emitido">Emitido</option>
+          <option value="perdido">Perdido</option>
+        </select>
+      </div>
+      <div class="field" id="edit-grp-fechaCierre" style="display:none;">
+        <label>Día en que se cerró</label>
+        <input type="date" id="edit-fechaCierre">
+      </div>
+      <div class="field" id="edit-grp-fechaInstalacion" style="display:none;">
+        <label>Fecha de instalación</label>
+        <input type="date" id="edit-fechaInstalacion">
+      </div>
+      <div class="field" id="edit-grp-numeroOrden" style="display:none;">
+        <label>Número de orden</label>
+        <input type="text" id="edit-numeroOrden" placeholder="Ej: OR-10293">
+      </div>
+      <div class="field" id="edit-grp-proxima">
+        <label>Próximo contacto<span class="req" id="edit-proxima-req">*</span></label>
+        <input type="date" id="edit-proxima">
+      </div>
+      <div class="field full">
+        <label>Comentario<span class="req">*</span></label>
+        <textarea id="edit-comentario"></textarea>
+      </div>
     </div>
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn ghost small" id="modalEditCancel">Cancelar</button>
@@ -591,7 +626,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div class="toast" id="toast"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7wp-VolPvQs9NBweLayzFo3p6F348UtTb8tLHfKf1KpI3yKVro3QMq2OfkpW2pcW5HA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsYNCrZW5q25DHo9lYofPZFMXRZnO1SFAMVM_OaogkhlV_UeVNB-3GyvkXUhg7UtfgZQ/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const ESTADOS = [
@@ -1001,7 +1036,7 @@ function renderContactabilidad(){
       <td class="mono" style="color:var(--text-dim);">${fmtDate(last.fecha)}</td>
       <td><span class="urg ${cls}">${txt}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn small btn-editar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" data-estado="${escapeHtml(last.estado)}" data-proxima="${escapeHtml(last.proximaFecha||'')}" data-fechacierre="${escapeHtml(last.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(last.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(last.numeroOrden||'')}">Editar</button>
+        <button class="btn small btn-editar" data-id="${escapeHtml(last.id)}">Editar</button>
         <button class="btn small btn-eliminar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" style="margin-left:4px;">Eliminar</button>
       </td>
     </tr>`;
@@ -1088,7 +1123,7 @@ function alertCardHtml(g, vencido, dateField){
     </div>
     ${urg}
     <div class="actions">
-      <button class="btn small btn-editar" data-id="${escapeHtml(g.id)}" data-nombre="${escapeHtml(g.nombre)}" data-estado="${escapeHtml(g.estado)}" data-proxima="${escapeHtml(g.proximaFecha||'')}" data-fechacierre="${escapeHtml(g.fechaCierre||'')}" data-fechainstalacion="${escapeHtml(g.fechaInstalacion||'')}" data-numeroorden="${escapeHtml(g.numeroOrden||'')}">Editar</button>
+      <button class="btn small btn-editar" data-id="${escapeHtml(g.id)}">Editar</button>
       ${gestionarBtn}
     </div>
   </div>`;
@@ -1359,11 +1394,18 @@ document.getElementById('modalDeleteConfirm').addEventListener('click', async ()
 
 let editTargetId = null;
 
+function populateEditEjecutivoSelect(){
+  const sel = document.getElementById('edit-ejecutivo');
+  sel.innerHTML = EJECUTIVOS.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
+}
+populateEditEjecutivoSelect();
+
 function updateEditFields(){
   const estado = document.getElementById('edit-estado').value;
   document.getElementById('edit-grp-fechaCierre').style.display = (estado==='cerrado') ? '' : 'none';
   document.getElementById('edit-grp-fechaInstalacion').style.display = (estado==='emitido') ? '' : 'none';
   document.getElementById('edit-grp-numeroOrden').style.display = (estado==='emitido') ? '' : 'none';
+  document.getElementById('edit-proxima-req').style.display = estado==='perdido' ? 'none' : '';
   if(estado==='cerrado' && !document.getElementById('edit-fechaCierre').value){
     document.getElementById('edit-fechaCierre').value = todayISO();
   }
@@ -1373,13 +1415,22 @@ document.getElementById('edit-estado').addEventListener('change', updateEditFiel
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('.btn-editar');
   if(!btn) return;
-  editTargetId = btn.dataset.id;
-  document.getElementById('editClienteName').textContent = btn.dataset.nombre;
-  document.getElementById('edit-estado').value = btn.dataset.estado || 'pendiente';
-  document.getElementById('edit-proxima').value = btn.dataset.proxima || '';
-  document.getElementById('edit-fechaCierre').value = btn.dataset.fechacierre || '';
-  document.getElementById('edit-fechaInstalacion').value = btn.dataset.fechainstalacion || '';
-  document.getElementById('edit-numeroOrden').value = btn.dataset.numeroorden || '';
+  const record = gestiones.find(g=>g.id===btn.dataset.id);
+  if(!record){ showToast('No se encontró el registro.'); return; }
+  editTargetId = record.id;
+  document.getElementById('edit-ejecutivo').value = record.ejecutivo || EJECUTIVOS[0];
+  document.getElementById('edit-nombre').value = record.nombre || '';
+  document.getElementById('edit-rut').value = record.rut || '';
+  document.getElementById('edit-telefono').value = record.telefono || '';
+  document.getElementById('edit-direccion').value = record.direccion || '';
+  document.getElementById('edit-comuna').value = record.comuna || '';
+  document.getElementById('edit-producto').value = record.producto || 'NAKED';
+  document.getElementById('edit-estado').value = record.estado || 'pendiente';
+  document.getElementById('edit-proxima').value = record.proximaFecha || '';
+  document.getElementById('edit-fechaCierre').value = record.fechaCierre || '';
+  document.getElementById('edit-fechaInstalacion').value = record.fechaInstalacion || '';
+  document.getElementById('edit-numeroOrden').value = record.numeroOrden || '';
+  document.getElementById('edit-comentario').value = record.comentario || '';
   updateEditFields();
   document.getElementById('modalEdit').classList.add('open');
 });
@@ -1387,11 +1438,23 @@ document.getElementById('modalEditCancel').addEventListener('click', ()=>{
   document.getElementById('modalEdit').classList.remove('open');
 });
 document.getElementById('modalEditSave').addEventListener('click', async ()=>{
+  const ejecutivo = document.getElementById('edit-ejecutivo').value;
+  const nombre = document.getElementById('edit-nombre').value.trim();
+  const rut = document.getElementById('edit-rut').value.trim();
+  const telefono = document.getElementById('edit-telefono').value.trim();
+  const direccion = document.getElementById('edit-direccion').value.trim();
+  const comuna = document.getElementById('edit-comuna').value.trim();
+  const producto = document.getElementById('edit-producto').value;
   const estado = document.getElementById('edit-estado').value;
   const proxima = document.getElementById('edit-proxima').value;
   const fechaCierre = document.getElementById('edit-fechaCierre').value;
   const fechaInstalacion = document.getElementById('edit-fechaInstalacion').value;
   const numeroOrden = document.getElementById('edit-numeroOrden').value.trim();
+  const comentario = document.getElementById('edit-comentario').value.trim();
+
+  if(!nombre){ showToast('Ingresa el nombre del cliente.'); return; }
+  if(!telefono){ showToast('Ingresa el teléfono de contacto.'); return; }
+  if(!comentario){ showToast('Ingresa un comentario.'); return; }
   if(estado!=='perdido' && !proxima){
     showToast('Selecciona la fecha de próximo contacto.');
     return;
@@ -1405,7 +1468,11 @@ document.getElementById('modalEditSave').addEventListener('click', async ()=>{
     return;
   }
   document.getElementById('modalEditSave').disabled = true;
-  const payload = {action:'update', id: editTargetId, estado, proximaFecha: proxima};
+  const payload = {
+    action:'update', id: editTargetId,
+    ejecutivo, nombre, rut, telefono, direccion, comuna, producto, comentario,
+    estado, proximaFecha: proxima
+  };
   payload.fechaCierre = (estado==='cerrado') ? fechaCierre : undefined;
   payload.fechaInstalacion = (estado==='emitido') ? fechaInstalacion : undefined;
   payload.numeroOrden = estado==='emitido' ? numeroOrden : undefined;
