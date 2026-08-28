@@ -237,12 +237,15 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 
 .mini-modal{
   position:fixed;inset:0;background:rgba(4,7,10,.6);display:none;
-  align-items:center;justify-content:center;z-index:50;padding:20px;
+  align-items:flex-start;justify-content:center;z-index:50;padding:20px;
+  overflow-y:auto;
 }
 .mini-modal.open{display:flex;}
 .mini-modal .box{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:20px;width:340px;max-width:100%;
+  max-height:calc(100vh - 40px);overflow-y:auto;
+  margin:auto 0;
 }
 .mini-modal h3{margin:0 0 14px;font-size:15px;}
 
