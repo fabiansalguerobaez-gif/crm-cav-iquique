@@ -489,6 +489,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
           <span><span class="dot" style="background:var(--emitido);"></span>Ventas emitidas</span>
           <span><span class="dot" style="background:var(--cerrado);"></span>Ventas cerradas</span>
         </div>
+        <p style="font-size:11px;color:var(--text-faint);margin:10px 0 0;">"Ventas emitidas" incluye toda venta que alguna vez tuvo fecha de instalación, aunque después haya cambiado a Cerrado o Perdido — por eso siempre es mayor o igual a "Ventas cerradas".</p>
       </div>
 
       <div class="card" id="cardPorEjecutivo" style="margin-bottom:18px;">
@@ -706,6 +707,9 @@ function countMetric(monthPrefix, metric, execsInScope){
   if(metric==='emitidas'){
     return gestiones.filter(g=>g.estado==='emitido' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
   }
+  if(metric==='emitidas_historico'){
+    return gestiones.filter(g=>g.fechaInstalacion && g.producto!=='MOVIL' && g.fechaInstalacion.startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
+  }
   if(metric==='cerradas'){
     return gestiones.filter(g=>g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
   }
@@ -716,7 +720,7 @@ function renderComparativoMes(year, monthIdx, monthPrefix, execsInScope){
   const prevPrefix = prev.year + '-' + pad2(prev.monthIdx+1);
   const metrics = [
     {key:'ingresados', label:'Registros de gestiones'},
-    {key:'emitidas', label:'Ventas emitidas'},
+    {key:'emitidas_historico', label:'Ventas emitidas'},
     {key:'cerradas', label:'Ventas cerradas'}
   ];
   document.getElementById('comparativoMes').innerHTML = metrics.map(m=>{
@@ -742,7 +746,7 @@ function renderTendencia(year, monthIdx, execsInScope){
   months.forEach(m=>{
     const mp = m.year+'-'+pad2(m.monthIdx+1);
     series.ingresados.push(countMetric(mp,'ingresados',execsInScope));
-    series.emitidas.push(countMetric(mp,'emitidas',execsInScope));
+    series.emitidas.push(countMetric(mp,'emitidas_historico',execsInScope));
     series.cerradas.push(countMetric(mp,'cerradas',execsInScope));
   });
   const maxVal = Math.max(1, ...series.ingresados, ...series.emitidas, ...series.cerradas) * 1.15;
