@@ -187,6 +187,11 @@ tr:hover td{background:var(--surface-2);}
 .mini-rank-row:last-child{border-bottom:none;}
 .mini-rank-row .mrn{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;}
 .mini-rank-row .mrv{font-family:'JetBrains Mono',monospace;font-weight:700;}
+.reco-item{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:9px;background:var(--surface-2);border-left:3px solid var(--border);margin-bottom:8px;font-size:13px;}
+.reco-item:last-child{margin-bottom:0;}
+.reco-item.warn{border-left-color:var(--perdido);}
+.reco-item.ok{border-left-color:var(--cotizacion);}
+.reco-icon{flex-shrink:0;font-size:14px;line-height:1.4;}
 .metas-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;}
 select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;}
 
@@ -535,6 +540,29 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
             <div id="rankCerradas"></div>
           </div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="section-title" style="margin-top:0;">Embudo de ventas</div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Meta por ejecutivo: 6 contactos/día (120 al mes) → 15% efectividad (18 emitidas) → máx. 22% cancelación post-emisión (13 cerradas).</p>
+        <div id="embudoStages"></div>
+        <div class="grid grid-2" style="margin-top:16px;">
+          <div class="stat">
+            <div class="lbl">Efectividad sobre contactos</div>
+            <div class="val" id="embudoEfectividadVal">—</div>
+            <div class="sub">meta ≥ 15%</div>
+          </div>
+          <div class="stat">
+            <div class="lbl">Cancelación post-emisión</div>
+            <div class="val" id="embudoCancelacionVal">—</div>
+            <div class="sub">meta ≤ 22% (solo pérdidas después de emitida)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="section-title" style="margin-top:0;">Posibilidades de mejora</div>
+        <div id="embudoRecomendaciones"></div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
@@ -944,6 +972,83 @@ function proyeccionColor(v){
   if(v <= 12) return 'var(--proy-orange)';
   if(v <= 15) return 'var(--proy-yellow)';
   return 'var(--cotizacion)';
+}
+
+const META_EMBUDO_CONTACTOS_MES = 120;
+const META_EMBUDO_CONTACTOS_SEMANA = 30;
+const META_EMBUDO_EFECTIVIDAD = 0.15;
+const META_EMBUDO_EMISION_MES = 18;
+const META_EMBUDO_CANCELACION = 0.22;
+
+function embudoStageBar(label, actual, meta, proy, color){
+  const maxV = Math.max(meta, proy, actual, 1) * 1.15;
+  const proyExtra = Math.max(0, proy-actual);
+  const pctActual = Math.min(100, actual/maxV*100);
+  const pctExtra = Math.min(100-pctActual, proyExtra/maxV*100);
+  const metaPct = Math.min(100, meta/maxV*100);
+  return `<div class="bar-row">
+    <div class="bl">${label}</div>
+    <div class="bar-track">
+      <div style="position:absolute;top:0;height:100%;left:0;width:${pctActual}%;background:${color};border-radius:4px;"></div>
+      <div style="position:absolute;top:0;height:100%;left:${pctActual}%;width:${pctExtra}%;background:${color};opacity:.45;border-radius:4px;"></div>
+      <div class="meta-line" style="left:${metaPct}%;"></div>
+    </div>
+    <div class="bn">${actual} (proy. ${Math.round(proy)}) / ${meta}</div>
+  </div>`;
+}
+
+function renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth){
+  const n = execsInScope.length;
+  const metaContactos = META_EMBUDO_CONTACTOS_MES * n;
+  const metaEmision = META_EMBUDO_EMISION_MES * n;
+  const metaCerradas = META_INDIVIDUAL * n;
+
+  const contactosActual = countMetric(monthPrefix, 'ingresados', execsInScope);
+  const emitidasActual = countMetric(monthPrefix, 'emitidas_historico', execsInScope);
+  const cerradasActual = countMetric(monthPrefix, 'cerradas', execsInScope);
+  const perdidasPostEmision = gestiones.filter(g=>g.estado==='perdido' && g.fechaInstalacion && g.producto!=='MOVIL' && g.fechaInstalacion.startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
+
+  const proyContactos = ritmo>0 ? contactosActual/ritmo : contactosActual;
+  const proyEmision = ritmo>0 ? emitidasActual/ritmo : emitidasActual;
+  const proyCerradas = ritmo>0 ? cerradasActual/ritmo : cerradasActual;
+
+  const efectividadPct = contactosActual>0 ? (emitidasActual/contactosActual*100) : 0;
+  const cancelacionPct = emitidasActual>0 ? (perdidasPostEmision/emitidasActual*100) : 0;
+
+  document.getElementById('embudoStages').innerHTML =
+    embudoStageBar('Contactos', contactosActual, metaContactos, proyContactos, 'var(--accent)') +
+    embudoStageBar('Emitidas', emitidasActual, metaEmision, proyEmision, 'var(--emitido)') +
+    embudoStageBar('Cerradas', cerradasActual, metaCerradas, proyCerradas, 'var(--cerrado)') +
+    `<div class="legend"><span style="color:var(--text-faint);">Color sólido = ya logrado · color claro = proyección adicional al ritmo actual</span></div>`;
+
+  const efOk = efectividadPct >= META_EMBUDO_EFECTIVIDAD*100;
+  document.getElementById('embudoEfectividadVal').innerHTML = `<span style="color:${efOk?'var(--cotizacion)':'var(--perdido)'};">${efectividadPct.toFixed(1)}%</span>`;
+  const cancOk = cancelacionPct <= META_EMBUDO_CANCELACION*100;
+  document.getElementById('embudoCancelacionVal').innerHTML = `<span style="color:${cancOk?'var(--cotizacion)':'var(--perdido)'};">${cancelacionPct.toFixed(1)}%</span>`;
+
+  const contactabilidadOk = proyContactos >= metaContactos;
+  const metaCerradasOk = proyCerradas >= metaCerradas;
+  const promedioDiario = dayOfMonth>0 ? (contactosActual/dayOfMonth).toFixed(1) : '0';
+
+  const box = document.getElementById('embudoRecomendaciones');
+  if(metaCerradasOk){
+    box.innerHTML = `<div class="reco-item ok"><span class="reco-icon">✓</span><div>La proyección de cerradas (${Math.round(proyCerradas)}) alcanza la meta (${metaCerradas}). Vas bien encaminado — mantén el ritmo actual.</div></div>`;
+    return;
+  }
+  const items = [];
+  if(!contactabilidadOk){
+    items.push(`<div class="reco-item warn"><span class="reco-icon">⚠</span><div><strong>Contactabilidad diaria:</strong> el promedio actual es ${promedioDiario} contactos/día (meta: 6). Proyectando ${Math.round(proyContactos)} de ${metaContactos} contactos del mes. Prioriza aumentar los contactos diarios.</div></div>`);
+  }
+  if(!efOk){
+    items.push(`<div class="reco-item warn"><span class="reco-icon">⚠</span><div><strong>Efectividad sobre contactos:</strong> ${efectividadPct.toFixed(1)}% vs meta 15%. Mejora la conversión de contactos a emisión.</div></div>`);
+  }
+  if(!cancOk){
+    items.push(`<div class="reco-item warn"><span class="reco-icon">⚠</span><div><strong>Cancelación post-emisión:</strong> ${cancelacionPct.toFixed(1)}% vs máximo 22% (${perdidasPostEmision} de ${emitidasActual} emitidas se perdieron después de emitidas). Reduce las ventas perdidas luego de emitidas.</div></div>`);
+  }
+  if(items.length===0){
+    items.push(`<div class="reco-item"><span class="reco-icon">ℹ</span><div>Los tres indicadores (contactabilidad, efectividad y cancelación) están dentro de la meta, pero la proyección de cerradas (${Math.round(proyCerradas)}) todavía no alcanza la meta (${metaCerradas}). Puede ser un tema de tiempo — sigue así hasta fin de mes.</div></div>`);
+  }
+  box.innerHTML = items.join('');
 }
 
 let gestiones = [];
@@ -1508,6 +1613,7 @@ function renderMetas(){
   const ventasActuales = cerradasMes.length;
   const meta = selectedExec==='all' ? META_INDIVIDUAL * EJECUTIVOS.length : META_INDIVIDUAL;
   const ritmo = dayOfMonth / 30;
+  renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth);
   const proyeccion = ritmo > 0 ? (ventasActuales / ritmo) : ventasActuales;
   const cumplimientoProyectado = meta>0 ? (proyeccion / meta * 100) : 0;
 
@@ -1579,14 +1685,14 @@ function renderMetas(){
       <span><span class="dot" style="background:var(--accent);"></span>Meta diaria (${metaDiaria})</span>
     </div>`;
 
+  const metaSemanaFija = META_EMBUDO_CONTACTOS_SEMANA * execsInScope.length;
   const weeks = [];
   for(let start=1; start<=dayOfMonth; start+=7){
     const end = Math.min(start+6, totalDiasMes);
     weeks.push({start, end});
   }
   document.getElementById('barsSemanas').innerHTML = weeks.map((w, idx)=>{
-    const diasSemana = w.end - w.start + 1;
-    const metaSemana = metaDiaria * diasSemana;
+    const metaSemana = metaSemanaFija;
     const count = gestiones.filter(g=>{
       if(g.producto==='MOVIL' || !g.fecha || !g.fecha.startsWith(monthPrefix)) return false;
       if(!execsInScope.includes(g.ejecutivo)) return false;
@@ -1599,16 +1705,16 @@ function renderMetas(){
       <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,pct)}%;background:${pct>=100?'var(--cotizacion)':(pct>=80?'var(--pendiente)':'var(--perdido)')};"></div></div>
       <div class="bn">${count}/${metaSemana}</div>
     </div>`;
-  }).join('') + (weeks.length? `<div class="legend"><span class="mono" style="color:var(--text-faint);">Meta semana = ${metaDiaria} × días</span></div>` : '<div class="empty">Sin semanas transcurridas todavía.</div>');
+  }).join('') + (weeks.length? `<div class="legend"><span class="mono" style="color:var(--text-faint);">Meta semana = ${META_EMBUDO_CONTACTOS_SEMANA} × ejecutivo</span></div>` : '<div class="empty">Sin semanas transcurridas todavía.</div>');
 
-  const metaMes = metaDiaria * totalDiasMes;
+  const metaMes = META_EMBUDO_CONTACTOS_MES * execsInScope.length;
   const ventasMesDiaria = gestiones.filter(g=>g.producto!=='MOVIL'&&g.fecha&&g.fecha.startsWith(monthPrefix)&&execsInScope.includes(g.ejecutivo)).length;
   const pctMes = metaMes>0 ? (ventasMesDiaria/metaMes*100) : 0;
   document.getElementById('mesCumplimiento').innerHTML = `
     <div class="stat">
       <div class="lbl">Cumplimiento del mes</div>
       <div class="val" style="color:${pctMes>=100?'var(--cotizacion)':(pctMes>=80?'var(--pendiente)':'var(--perdido)')};">${Math.round(pctMes)}%</div>
-      <div class="sub">${ventasMesDiaria} de ${metaMes} (meta diaria × ${totalDiasMes} días)</div>
+      <div class="sub">${ventasMesDiaria} de ${metaMes} (${META_EMBUDO_CONTACTOS_MES} × ejecutivo)</div>
     </div>
   `;
 
