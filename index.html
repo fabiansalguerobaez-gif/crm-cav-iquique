@@ -196,6 +196,7 @@ tr:hover td{background:var(--surface-2);}
 .plan-cell.filled{background:var(--surface-2);border-style:solid;}
 .plan-cell .pc-turno{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
 .plan-cell .pc-lugar{font-size:12.5px;margin-top:2px;color:var(--text-dim);}
+.plan-cell .pc-schedule{font-size:10.5px;color:var(--accent);margin-top:2px;font-family:'JetBrains Mono',monospace;}
 .plan-cell.filled .pc-lugar{color:var(--text);}
 .plan-obs-dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
 .reco-item{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:9px;background:var(--surface-2);border-left:3px solid var(--border);margin-bottom:8px;font-size:13px;}
@@ -1232,6 +1233,28 @@ let planificacion = {};
 let ofertas = [];
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const TURNOS = ['AM','PM'];
+const PLANIFICACION_EJECUTIVOS = EJECUTIVOS.filter(e => e !== 'Astrid Caro');
+
+function getScheduleLabel(ejecutivo, dia, turno){
+  if(dia === 'Domingo') return '';
+  if(dia === 'Sábado'){
+    return turno === 'AM' ? 'Entrada 10:00 am - Salida 14:00' : '';
+  }
+  if(turno === 'AM') return 'Entrada 10:00 am';
+  const grupoA = ['Carmen Sanchez','Zianott Vicencio','Anggie Vasquez','Milly Villalobos'];
+  let hora = '';
+  if(dia === 'Viernes'){
+    hora = '19:00';
+  }else if(dia === 'Lunes' || dia === 'Miércoles'){
+    hora = grupoA.includes(ejecutivo) ? '18:00' : '19:00';
+  }else if(dia === 'Martes' || dia === 'Jueves'){
+    hora = grupoA.includes(ejecutivo) ? '19:00' : '18:00';
+  }
+  return hora ? ('Salida ' + hora) : '';
+}
+function isDiaLibre(dia, turno){
+  return dia === 'Domingo' || (dia === 'Sábado' && turno === 'PM');
+}
 const IS_ADMIN = !LOCKED_EXEC;
 let ADMIN_PASSWORD_VERIFIED = null;
 function planCellId(ejecutivo, dia, turno){ return ejecutivo+'||'+dia+'||'+turno; }
@@ -2127,7 +2150,7 @@ function renderPlanificacion(){
   headerRow.innerHTML = '<th>Ejecutiva</th>' + DIAS_SEMANA.map(d=>`<th>${d}</th>`).join('');
 
   const tbody = document.getElementById('planBody');
-  tbody.innerHTML = EJECUTIVOS.map(ex=>{
+  tbody.innerHTML = PLANIFICACION_EJECUTIVOS.map(ex=>{
     return `<tr>
       <td class="plan-name" rowspan="2">${escapeHtml(ex)}</td>
       ${DIAS_SEMANA.map(d=>planCellHtml(ex,d,'AM')).join('')}
@@ -2149,10 +2172,14 @@ function planCellHtml(ejecutivo, dia, turno){
   const cell = planificacion[id] || {lugar:'', observacion:''};
   const hasLugar = !!cell.lugar;
   const hasObs = !!cell.observacion;
+  const schedule = getScheduleLabel(ejecutivo, dia, turno);
+  const libre = isDiaLibre(dia, turno);
+  const placeholder = libre ? 'Día libre' : (IS_ADMIN ? '+ Agregar' : 'Sin asignar');
   return `<td>
     <div class="plan-cell ${hasLugar?'filled':''}" data-ex="${escapeHtml(ejecutivo)}" data-dia="${dia}" data-turno="${turno}">
       <div class="pc-turno">${turno}</div>
-      <div class="pc-lugar">${hasLugar ? escapeHtml(cell.lugar) : (IS_ADMIN ? '+ Agregar' : 'Sin asignar')}</div>
+      ${schedule ? `<div class="pc-schedule">${escapeHtml(schedule)}</div>` : ''}
+      <div class="pc-lugar">${hasLugar ? escapeHtml(cell.lugar) : placeholder}</div>
       ${hasObs ? '<div class="plan-obs-dot" title="Tiene observación"></div>' : ''}
     </div>
   </td>`;
