@@ -305,6 +305,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="nav-item" data-view="eliminadas"><span class="nav-icon">🗑</span>Eliminadas</div>
       <div class="nav-item" data-view="tickets"><span class="nav-icon">🎫</span>Tickets</div>
       <div class="nav-item" data-view="planificacion"><span class="nav-icon">🗓</span>Planificación</div>
+      <div class="nav-item" data-view="ofertas"><span class="nav-icon">🏷</span>Matriz de ofertas</div>
     </div>
     <div class="exec-box">
       <label id="execBoxLabel">Ejecutivo activo</label>
@@ -730,6 +731,70 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
     </div>
 
+    <div class="view" id="view-ofertas">
+      <div class="page-head">
+        <h2>Matriz de ofertas</h2>
+        <p id="ofertasHint">Ofertas disponibles del mes.</p>
+      </div>
+      <div class="card" id="cardNuevaOferta" style="margin-bottom:18px;">
+        <div class="section-title" style="margin-top:0;">Agregar oferta</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Tipo oferta</label>
+            <input type="text" id="of-tipo" placeholder="Ej: MASIVO, BTL, TOTALIZACION...">
+          </div>
+          <div class="field">
+            <label>Nombre CRM</label>
+            <input type="text" id="of-crm" placeholder="Ej: Internet Fibra_600">
+          </div>
+          <div class="field full">
+            <label>Descripción plan</label>
+            <input type="text" id="of-descripcion" placeholder="Ej: Internet Fibra Optica 600/600">
+          </div>
+          <div class="field full">
+            <label>Promoción</label>
+            <input type="text" id="of-promocion" placeholder="Ej: Descuento 26% x 6 meses BA 600">
+          </div>
+          <div class="field">
+            <label>Lleno ($)</label>
+            <input type="text" id="of-lleno" placeholder="Ej: 18990">
+          </div>
+          <div class="field">
+            <label>Descuento ($)</label>
+            <input type="text" id="of-descuento" placeholder="Ej: -5000">
+          </div>
+          <div class="field">
+            <label>Precio final ($)</label>
+            <input type="text" id="of-precioFinal" placeholder="Ej: 13990">
+          </div>
+          <div class="field">
+            <label>Beneficio (BO_NAME_TNT)</label>
+            <input type="text" id="of-boNameTnt" placeholder="Ej: HBOMAX Estandar">
+          </div>
+          <div class="field">
+            <label>Precio beneficio ($)</label>
+            <input type="text" id="of-precio" placeholder="Ej: 5990">
+          </div>
+          <div class="field">
+            <label>Precio final con beneficio ($)</label>
+            <input type="text" id="of-precioFinal2" placeholder="Ej: 18980">
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn primary" id="btnGuardarOferta">Agregar oferta</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Tipo oferta</th><th>Descripción plan</th><th>Nombre CRM</th><th>Promoción</th><th>Lleno</th><th>Descuento</th><th>Precio final</th><th>Beneficio</th><th>Precio benef.</th><th>Precio final c/benef.</th><th></th></tr></thead>
+          <tbody id="ofertasTabla"></tbody>
+        </table>
+        </div>
+        <div class="empty" id="ofertasEmpty" style="display:none;">No hay ofertas cargadas.</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -804,6 +869,58 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn ghost small" id="modalEditCancel">Cancelar</button>
       <button class="btn primary small" id="modalEditSave">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="mini-modal" id="modalEditOferta">
+  <div class="box" style="width:460px;">
+    <h3>Editar oferta</h3>
+    <div class="form-grid">
+      <div class="field">
+        <label>Tipo oferta</label>
+        <input type="text" id="eo-tipo">
+      </div>
+      <div class="field">
+        <label>Nombre CRM</label>
+        <input type="text" id="eo-crm">
+      </div>
+      <div class="field full">
+        <label>Descripción plan</label>
+        <input type="text" id="eo-descripcion">
+      </div>
+      <div class="field full">
+        <label>Promoción</label>
+        <input type="text" id="eo-promocion">
+      </div>
+      <div class="field">
+        <label>Lleno ($)</label>
+        <input type="text" id="eo-lleno">
+      </div>
+      <div class="field">
+        <label>Descuento ($)</label>
+        <input type="text" id="eo-descuento">
+      </div>
+      <div class="field">
+        <label>Precio final ($)</label>
+        <input type="text" id="eo-precioFinal">
+      </div>
+      <div class="field">
+        <label>Beneficio (BO_NAME_TNT)</label>
+        <input type="text" id="eo-boNameTnt">
+      </div>
+      <div class="field">
+        <label>Precio beneficio ($)</label>
+        <input type="text" id="eo-precio">
+      </div>
+      <div class="field">
+        <label>Precio final c/beneficio ($)</label>
+        <input type="text" id="eo-precioFinal2">
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn ghost small" id="modalEditOfertaCancel">Cancelar</button>
+      <button class="btn primary small" id="modalEditOfertaSave">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -911,7 +1028,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxC4IoB0SfEIbRRDK9IXxguwWmF3FTqe7tzEwmglCUX-IyKfsU1JEghJkLdvChe7GcwVA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9p3yaXKLPAK6XYsWblttpGyadC1zLm2HiAHVQ_UHxDkCY91zfqtoycu2ZJEG1wHBhfQ/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -1112,6 +1229,7 @@ let eliminadas = [];
 let tickets = [];
 let ticketsExecSel = null;
 let planificacion = {};
+let ofertas = [];
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const TURNOS = ['AM','PM'];
 const IS_ADMIN = !LOCKED_EXEC;
@@ -1272,6 +1390,33 @@ async function savePlanCell(id, ejecutivo, dia, turno, lugar, observacion){
   }catch(e){ showToast('No se pudo guardar la planificación.'); return false; }
 }
 
+async function loadOfertas(){
+  if(!sheetsConfigured()){ ofertas = []; return; }
+  try{
+    const raw = await jsonp(SCRIPT_URL + '?sheet=ofertas');
+    ofertas = raw.map(r=>({
+      id: r.id, tipoOferta: r.tipoOferta, descripcionPlan: r.descripcionPlan,
+      nombreCrm: r.nombreCrm, promocion: r.promocion, lleno: r.lleno, descuento: r.descuento,
+      precioFinal: r.precioFinal, boNameTnt: r.boNameTnt, precio: r.precio, precioFinal2: r.precioFinal2
+    }));
+  }catch(e){ showToast('No se pudo cargar la matriz de ofertas.'); ofertas = []; }
+}
+async function saveOferta(payload){
+  if(!sheetsConfigured()){
+    showToast('Falta configurar la URL de Google Sheets en el código.');
+    return false;
+  }
+  try{
+    await fetch(SCRIPT_URL, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({sheet:'ofertas', password: ADMIN_PASSWORD_VERIFIED}, payload))
+    });
+    return true;
+  }catch(e){ showToast('No se pudo guardar la oferta.'); return false; }
+}
+
 function populateExecSelects(){
   const list = LOCKED_EXEC ? [LOCKED_EXEC] : EJECUTIVOS;
   const opts = list.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
@@ -1298,6 +1443,7 @@ async function switchView(view){
   if(view==='eliminadas'){ showToast('Actualizando...'); await loadData(); renderEliminadas(); }
   if(view==='tickets'){ showToast('Actualizando...'); await loadTickets(); renderTickets(); }
   if(view==='planificacion'){ showToast('Actualizando...'); await loadPlanificacion(); renderPlanificacion(); }
+  if(view==='ofertas'){ showToast('Actualizando...'); await loadOfertas(); renderOfertas(); }
 }
 document.querySelectorAll('.nav-item').forEach(item=>{
   item.addEventListener('click', ()=>switchView(item.dataset.view));
@@ -2041,6 +2187,126 @@ document.getElementById('modalPlanSave').addEventListener('click', async ()=>{
     showToast('Planificación guardada.');
     document.getElementById('modalPlanCell').classList.remove('open');
     renderPlanificacion();
+  }
+});
+
+function fmtMoney(v){
+  const n = Number(v);
+  if(isNaN(n)) return escapeHtml(v||'');
+  return n.toLocaleString('es-CL');
+}
+
+function renderOfertas(){
+  document.getElementById('ofertasHint').textContent = IS_ADMIN
+    ? 'Ofertas disponibles del mes. Puedes agregar, editar o eliminar.'
+    : 'Ofertas disponibles del mes. Solo lectura.';
+  document.getElementById('cardNuevaOferta').style.display = IS_ADMIN ? '' : 'none';
+
+  const tbody = document.getElementById('ofertasTabla');
+  document.getElementById('ofertasEmpty').style.display = ofertas.length? 'none':'block';
+  tbody.innerHTML = ofertas.map(o=>`<tr>
+    <td style="color:var(--text-dim);">${escapeHtml(o.tipoOferta)}</td>
+    <td>${escapeHtml(o.descripcionPlan)}</td>
+    <td style="color:var(--text-dim);">${escapeHtml(o.nombreCrm)}</td>
+    <td style="color:var(--text-dim);">${escapeHtml(o.promocion)}</td>
+    <td class="mono">$${fmtMoney(o.lleno)}</td>
+    <td class="mono">$${fmtMoney(o.descuento)}</td>
+    <td class="mono">$${fmtMoney(o.precioFinal)}</td>
+    <td style="color:var(--text-dim);">${escapeHtml(o.boNameTnt)||'—'}</td>
+    <td class="mono">${o.precio? '$'+fmtMoney(o.precio) : '—'}</td>
+    <td class="mono">${o.precioFinal2? '$'+fmtMoney(o.precioFinal2) : '—'}</td>
+    <td style="white-space:nowrap;">${IS_ADMIN ? `
+      <button class="btn small btn-editar-oferta" data-id="${escapeHtml(o.id)}">Editar</button>
+      <button class="btn small btn-eliminar-oferta" data-id="${escapeHtml(o.id)}" style="margin-left:4px;">Eliminar</button>
+    ` : ''}</td>
+  </tr>`).join('');
+}
+
+document.getElementById('btnGuardarOferta').addEventListener('click', async ()=>{
+  const tipoOferta = document.getElementById('of-tipo').value.trim();
+  const descripcionPlan = document.getElementById('of-descripcion').value.trim();
+  const nombreCrm = document.getElementById('of-crm').value.trim();
+  const promocion = document.getElementById('of-promocion').value.trim();
+  const lleno = document.getElementById('of-lleno').value.trim();
+  const descuento = document.getElementById('of-descuento').value.trim();
+  const precioFinal = document.getElementById('of-precioFinal').value.trim();
+  const boNameTnt = document.getElementById('of-boNameTnt').value.trim();
+  const precio = document.getElementById('of-precio').value.trim();
+  const precioFinal2 = document.getElementById('of-precioFinal2').value.trim();
+  if(!tipoOferta || !descripcionPlan){
+    showToast('Completa al menos Tipo oferta y Descripción plan.');
+    return;
+  }
+  const payload = {id: uid(), tipoOferta, descripcionPlan, nombreCrm, promocion, lleno, descuento, precioFinal, boNameTnt, precio, precioFinal2, updatedAt: Date.now()};
+  document.getElementById('btnGuardarOferta').disabled = true;
+  const ok = await saveOferta(payload);
+  document.getElementById('btnGuardarOferta').disabled = false;
+  if(ok){
+    ofertas.push(payload);
+    showToast('Oferta agregada.');
+    ['of-tipo','of-descripcion','of-crm','of-promocion','of-lleno','of-descuento','of-precioFinal','of-boNameTnt','of-precio','of-precioFinal2'].forEach(id=>document.getElementById(id).value='');
+    renderOfertas();
+  }
+});
+
+let editOfertaTargetId = null;
+document.addEventListener('click', async (e)=>{
+  const editBtn = e.target.closest('.btn-editar-oferta');
+  if(editBtn){
+    const o = ofertas.find(x=>x.id===editBtn.dataset.id);
+    if(!o){ showToast('No se encontró la oferta.'); return; }
+    editOfertaTargetId = o.id;
+    document.getElementById('eo-tipo').value = o.tipoOferta||'';
+    document.getElementById('eo-crm').value = o.nombreCrm||'';
+    document.getElementById('eo-descripcion').value = o.descripcionPlan||'';
+    document.getElementById('eo-promocion').value = o.promocion||'';
+    document.getElementById('eo-lleno').value = o.lleno||'';
+    document.getElementById('eo-descuento').value = o.descuento||'';
+    document.getElementById('eo-precioFinal').value = o.precioFinal||'';
+    document.getElementById('eo-boNameTnt').value = o.boNameTnt||'';
+    document.getElementById('eo-precio').value = o.precio||'';
+    document.getElementById('eo-precioFinal2').value = o.precioFinal2||'';
+    document.getElementById('modalEditOferta').classList.add('open');
+    return;
+  }
+  const delBtn = e.target.closest('.btn-eliminar-oferta');
+  if(delBtn){
+    if(!confirm('¿Eliminar esta oferta de la matriz?')) return;
+    const ok = await saveOferta({action:'delete', id: delBtn.dataset.id});
+    if(ok){
+      ofertas = ofertas.filter(o=>o.id!==delBtn.dataset.id);
+      showToast('Oferta eliminada.');
+      renderOfertas();
+    }
+  }
+});
+document.getElementById('modalEditOfertaCancel').addEventListener('click', ()=>{
+  document.getElementById('modalEditOferta').classList.remove('open');
+});
+document.getElementById('modalEditOfertaSave').addEventListener('click', async ()=>{
+  const tipoOferta = document.getElementById('eo-tipo').value.trim();
+  const descripcionPlan = document.getElementById('eo-descripcion').value.trim();
+  const nombreCrm = document.getElementById('eo-crm').value.trim();
+  const promocion = document.getElementById('eo-promocion').value.trim();
+  const lleno = document.getElementById('eo-lleno').value.trim();
+  const descuento = document.getElementById('eo-descuento').value.trim();
+  const precioFinal = document.getElementById('eo-precioFinal').value.trim();
+  const boNameTnt = document.getElementById('eo-boNameTnt').value.trim();
+  const precio = document.getElementById('eo-precio').value.trim();
+  const precioFinal2 = document.getElementById('eo-precioFinal2').value.trim();
+  if(!tipoOferta || !descripcionPlan){
+    showToast('Completa al menos Tipo oferta y Descripción plan.');
+    return;
+  }
+  document.getElementById('modalEditOfertaSave').disabled = true;
+  const ok = await saveOferta({action:'update', id: editOfertaTargetId, tipoOferta, descripcionPlan, nombreCrm, promocion, lleno, descuento, precioFinal, boNameTnt, precio, precioFinal2});
+  document.getElementById('modalEditOfertaSave').disabled = false;
+  if(ok){
+    const idx = ofertas.findIndex(o=>o.id===editOfertaTargetId);
+    if(idx>-1) ofertas[idx] = Object.assign({}, ofertas[idx], {tipoOferta, descripcionPlan, nombreCrm, promocion, lleno, descuento, precioFinal, boNameTnt, precio, precioFinal2});
+    showToast('Oferta actualizada.');
+    document.getElementById('modalEditOferta').classList.remove('open');
+    renderOfertas();
   }
 });
 
