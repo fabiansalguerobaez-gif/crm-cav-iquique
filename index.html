@@ -279,6 +279,16 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 </head>
 <body>
 
+<div id="adminLockScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px;width:320px;max-width:100%;text-align:center;">
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:6px;">Acceso administrador</div>
+    <p style="font-size:12.5px;color:var(--text-dim);margin:0 0 18px;">Ingresa la contraseña para entrar al panel completo.</p>
+    <input type="password" id="adminPasswordInput" placeholder="Contraseña" style="width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+    <button class="btn primary" id="adminPasswordSubmit" style="width:100%;">Entrar</button>
+    <div id="adminPasswordError" style="color:var(--perdido);font-size:12px;margin-top:10px;display:none;">Contraseña incorrecta.</div>
+  </div>
+</div>
+
 <div class="app">
   <div class="sidebar">
     <div class="brand">
@@ -901,7 +911,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxz2dUvE0XXXICp4NrFJG63P6elpPBPNcWEYCy6J7VVQEdgo9l-BK-MMOR2MZReoFX6Fw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxC4IoB0SfEIbRRDK9IXxguwWmF3FTqe7tzEwmglCUX-IyKfsU1JEghJkLdvChe7GcwVA/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -1105,6 +1115,7 @@ let planificacion = {};
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const TURNOS = ['AM','PM'];
 const IS_ADMIN = !LOCKED_EXEC;
+let ADMIN_PASSWORD_VERIFIED = null;
 function planCellId(ejecutivo, dia, turno){ return ejecutivo+'||'+dia+'||'+turno; }
 let efRange = 30;
 let efExecSel = 'all';
@@ -1227,6 +1238,14 @@ async function saveTicket(record){
   }catch(e){ showToast('No se pudo guardar el ticket.'); return false; }
 }
 
+async function verifyAdminPassword(pw){
+  if(!sheetsConfigured()) return false;
+  try{
+    const result = await jsonp(SCRIPT_URL + '?sheet=checkpassword&password=' + encodeURIComponent(pw));
+    return !!(result && result.ok);
+  }catch(e){ return false; }
+}
+
 async function loadPlanificacion(){
   if(!sheetsConfigured()){ planificacion = {}; return; }
   try{
@@ -1247,7 +1266,7 @@ async function savePlanCell(id, ejecutivo, dia, turno, lugar, observacion){
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({sheet:'planificacion', id, ejecutivo, dia, turno, lugar, observacion, updatedAt: Date.now()})
+      body: JSON.stringify({sheet:'planificacion', id, ejecutivo, dia, turno, lugar, observacion, updatedAt: Date.now(), password: ADMIN_PASSWORD_VERIFIED})
     });
     return true;
   }catch(e){ showToast('No se pudo guardar la planificación.'); return false; }
@@ -2258,7 +2277,7 @@ document.getElementById('btnExportPdf').addEventListener('click', ()=>{
   window.print();
 });
 
-(async function init(){
+async function startApp(){
   populateExecSelects();
   populateMetasExecSelect();
   resetForm();
@@ -2269,6 +2288,47 @@ document.getElementById('btnExportPdf').addEventListener('click', ()=>{
   }else{
     document.getElementById('configWarning').style.display = 'block';
   }
+}
+
+document.getElementById('adminPasswordSubmit').addEventListener('click', async ()=>{
+  const pw = document.getElementById('adminPasswordInput').value;
+  if(!pw) return;
+  document.getElementById('adminPasswordSubmit').disabled = true;
+  document.getElementById('adminPasswordError').style.display = 'none';
+  const valid = await verifyAdminPassword(pw);
+  document.getElementById('adminPasswordSubmit').disabled = false;
+  if(valid){
+    ADMIN_PASSWORD_VERIFIED = pw;
+    sessionStorage.setItem('cav_admin_pw', pw);
+    document.getElementById('adminLockScreen').style.display = 'none';
+    document.querySelector('.app').style.display = '';
+    await startApp();
+  }else{
+    document.getElementById('adminPasswordError').style.display = 'block';
+  }
+});
+document.getElementById('adminPasswordInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter') document.getElementById('adminPasswordSubmit').click();
+});
+
+(async function init(){
+  if(!LOCKED_EXEC){
+    document.querySelector('.app').style.display = 'none';
+    const savedPw = sessionStorage.getItem('cav_admin_pw');
+    if(savedPw){
+      const valid = await verifyAdminPassword(savedPw);
+      if(valid){
+        ADMIN_PASSWORD_VERIFIED = savedPw;
+        document.querySelector('.app').style.display = '';
+        await startApp();
+        return;
+      }
+      sessionStorage.removeItem('cav_admin_pw');
+    }
+    document.getElementById('adminLockScreen').style.display = 'flex';
+    return;
+  }
+  await startApp();
 })();
 </script>
 </body>
