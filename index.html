@@ -408,11 +408,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
             <span class="err-msg">Ingresa un comentario.</span>
           </div>
         </div>
-        <div style="margin-top:16px;display:flex;gap:10px;">
+        <div style="margin-top:16px;display:flex;gap:10px;" id="registrarActions">
           <button class="btn primary" id="btnGuardar">Registrar gestión</button>
           <button class="btn ghost" id="btnLimpiar">Limpiar</button>
           <a class="btn ghost" href="https://fabiansalguerobaez-gif.github.io/crm-cav-iquique/cotizador.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">Generar cotización ↗</a>
         </div>
+        <p id="registrarReadOnlyNote" style="display:none;font-size:12.5px;color:var(--text-faint);margin-top:12px;">Vista de solo lectura — no se pueden registrar gestiones desde este link.</p>
       </div>
     </div>
 
@@ -643,7 +644,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <h2>Tickets</h2>
         <p>Solicitudes de Vacancia o Creación.</p>
       </div>
-      <div class="card" style="margin-bottom:18px;">
+      <div class="card" style="margin-bottom:18px;" id="cardNuevoTicket">
         <div class="section-title" style="margin-top:0;">Nuevo ticket</div>
         <div class="form-grid">
           <div class="field" id="tgrp-ejecutivo">
@@ -1103,6 +1104,7 @@ const ESTADOS = [
 const EST_MAP = Object.fromEntries(ESTADOS.map(e=>[e.key,e]));
 const urlParams = new URLSearchParams(window.location.search);
 const LOCKED_EXEC = (urlParams.get('ejecutivo') && EJECUTIVOS.includes(urlParams.get('ejecutivo'))) ? urlParams.get('ejecutivo') : null;
+const READ_ONLY_LINK = !LOCKED_EXEC && urlParams.get('vista') === 'lectura';
 
 const META_INDIVIDUAL = 13;
 const META_DIARIA_INDIVIDUAL = 6;
@@ -1349,6 +1351,8 @@ function isDiaLibre(dia, turno){
   return dia === 'Domingo' || (dia === 'Sábado' && turno === 'PM');
 }
 const IS_ADMIN = !LOCKED_EXEC;
+const CAN_EDIT_ADMIN = !LOCKED_EXEC && !READ_ONLY_LINK;
+const CAN_EDIT_DATA = !READ_ONLY_LINK;
 let ADMIN_PASSWORD_VERIFIED = null;
 function planCellId(ejecutivo, dia, turno){ return ejecutivo+'||'+dia+'||'+turno; }
 let efRange = 30;
@@ -1577,6 +1581,8 @@ function populateExecSelects(){
     document.getElementById('t-ejecutivo').disabled = true;
     document.getElementById('execBoxLabel').textContent = 'Tu vista personal';
     document.getElementById('navEquipo').style.display = 'none';
+  }else if(READ_ONLY_LINK){
+    document.getElementById('execBoxLabel').textContent = '👁 Vista general (solo lectura)';
   }
 }
 
@@ -1865,8 +1871,8 @@ function renderContactabilidad(){
       <td class="mono" style="color:var(--text-dim);">${fmtDate(last.fecha)}</td>
       <td><span class="urg ${cls}">${txt}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn small btn-editar" data-id="${escapeHtml(last.id)}">Editar</button>
-        <button class="btn small btn-eliminar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" style="margin-left:4px;">Eliminar</button>
+        ${CAN_EDIT_DATA ? `<button class="btn small btn-editar" data-id="${escapeHtml(last.id)}">Editar</button>
+        <button class="btn small btn-eliminar" data-id="${escapeHtml(last.id)}" data-nombre="${escapeHtml(last.nombre)}" style="margin-left:4px;">Eliminar</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1942,7 +1948,7 @@ function alertCardHtml(g, vencido, dateField){
   const metaLine = dateField==='proximaFecha'
     ? `${escapeHtml(g.ejecutivo)} · ${escapeHtml(g.producto)} · último contacto ${fmtDate(g.fecha)}${g.telefono? ' · '+escapeHtml(g.telefono):''}`
     : `${escapeHtml(g.ejecutivo)} · ${escapeHtml(g.producto)} · instalación ${fmtDate(g.fechaInstalacion)}${g.numeroOrden? ' · N° '+escapeHtml(g.numeroOrden):''}`;
-  const gestionarBtn = dateField==='proximaFecha'
+  const gestionarBtn = (dateField==='proximaFecha' && CAN_EDIT_DATA)
     ? `<button class="btn small primary alert-gestionar" data-nombre="${escapeHtml(g.nombre)}" data-ejecutivo="${escapeHtml(g.ejecutivo)}" data-telefono="${escapeHtml(g.telefono||'')}" data-rut="${escapeHtml(g.rut||'')}" data-producto="${escapeHtml(g.producto||'')}">Gestionar</button>`
     : '';
   return `<div class="alert-card ${vencido?'vencido':''}">
@@ -1952,7 +1958,7 @@ function alertCardHtml(g, vencido, dateField){
     </div>
     ${urg}
     <div class="actions">
-      <button class="btn small btn-editar" data-id="${escapeHtml(g.id)}">Editar</button>
+      ${CAN_EDIT_DATA ? `<button class="btn small btn-editar" data-id="${escapeHtml(g.id)}">Editar</button>` : ''}
       ${gestionarBtn}
     </div>
   </div>`;
@@ -2270,13 +2276,13 @@ function renderTickets(){
       <td style="color:var(--text-dim);">${escapeHtml(t.comuna)}</td>
       <td class="mono">${escapeHtml(t.numeroTicket||'—')}</td>
       <td><span class="chip ${t.estado}">${e.label}</span></td>
-      <td><button class="btn small btn-editar-ticket" data-id="${escapeHtml(t.id)}">Editar</button></td>
+      <td>${CAN_EDIT_DATA ? `<button class="btn small btn-editar-ticket" data-id="${escapeHtml(t.id)}">Editar</button>` : ''}</td>
     </tr>`;
   }).join('');
 }
 
 function renderPlanificacion(){
-  document.getElementById('planHint').textContent = IS_ADMIN
+  document.getElementById('planHint').textContent = CAN_EDIT_ADMIN
     ? 'Lugares de trabajo por jornada AM/PM. Haz clic en una celda para editar.'
     : 'Lugares de trabajo por jornada AM/PM. Solo lectura.';
 
@@ -2308,7 +2314,7 @@ function planCellHtml(ejecutivo, dia, turno){
   const hasObs = !!cell.observacion;
   const schedule = getScheduleLabel(ejecutivo, dia, turno);
   const libre = isDiaLibre(dia, turno);
-  const placeholder = libre ? 'Día libre' : (IS_ADMIN ? '+ Agregar' : 'Sin asignar');
+  const placeholder = libre ? 'Día libre' : (CAN_EDIT_ADMIN ? '+ Agregar' : 'Sin asignar');
   return `<td>
     <div class="plan-cell ${hasLugar?'filled':''}" data-ex="${escapeHtml(ejecutivo)}" data-dia="${dia}" data-turno="${turno}">
       <div class="pc-turno">${turno}</div>
@@ -2328,16 +2334,16 @@ function openPlanCellModal(ejecutivo, dia, turno){
   const obsInput = document.getElementById('plan-obs');
   lugarInput.value = cell.lugar;
   obsInput.value = cell.observacion;
-  lugarInput.disabled = !IS_ADMIN;
-  obsInput.disabled = !IS_ADMIN;
-  document.getElementById('modalPlanSave').style.display = IS_ADMIN ? '' : 'none';
+  lugarInput.disabled = !CAN_EDIT_ADMIN;
+  obsInput.disabled = !CAN_EDIT_ADMIN;
+  document.getElementById('modalPlanSave').style.display = CAN_EDIT_ADMIN ? '' : 'none';
   document.getElementById('modalPlanCell').classList.add('open');
 }
 document.getElementById('modalPlanCancel').addEventListener('click', ()=>{
   document.getElementById('modalPlanCell').classList.remove('open');
 });
 document.getElementById('modalPlanSave').addEventListener('click', async ()=>{
-  if(!planCellTarget || !IS_ADMIN) return;
+  if(!planCellTarget || !CAN_EDIT_ADMIN) return;
   const lugar = document.getElementById('plan-lugar').value.trim();
   const observacion = document.getElementById('plan-obs').value.trim();
   document.getElementById('modalPlanSave').disabled = true;
@@ -2358,10 +2364,10 @@ function fmtMoney(v){
 }
 
 function renderOfertas(){
-  document.getElementById('ofertasHint').textContent = IS_ADMIN
+  document.getElementById('ofertasHint').textContent = CAN_EDIT_ADMIN
     ? 'Ofertas disponibles del mes. Puedes agregar, editar o eliminar.'
     : 'Ofertas disponibles del mes. Solo lectura.';
-  document.getElementById('cardNuevaOferta').style.display = IS_ADMIN ? '' : 'none';
+  document.getElementById('cardNuevaOferta').style.display = CAN_EDIT_ADMIN ? '' : 'none';
 
   const tbody = document.getElementById('ofertasTabla');
   document.getElementById('ofertasEmpty').style.display = ofertas.length? 'none':'block';
@@ -2376,7 +2382,7 @@ function renderOfertas(){
     <td style="color:var(--text-dim);">${escapeHtml(o.boNameTnt)||'—'}</td>
     <td class="mono">${o.precio? '$'+fmtMoney(o.precio) : '—'}</td>
     <td class="mono">${o.precioFinal2? '$'+fmtMoney(o.precioFinal2) : '—'}</td>
-    <td style="white-space:nowrap;">${IS_ADMIN ? `
+    <td style="white-space:nowrap;">${CAN_EDIT_ADMIN ? `
       <button class="btn small btn-editar-oferta" data-id="${escapeHtml(o.id)}">Editar</button>
       <button class="btn small btn-eliminar-oferta" data-id="${escapeHtml(o.id)}" style="margin-left:4px;">Eliminar</button>
     ` : ''}</td>
@@ -2472,7 +2478,7 @@ document.getElementById('modalEditOfertaSave').addEventListener('click', async (
 });
 
 function renderEquipo(){
-  document.getElementById('equipoHint').textContent = IS_ADMIN
+  document.getElementById('equipoHint').textContent = CAN_EDIT_ADMIN
     ? 'Estado de cada ejecutiva. Haz clic en Editar para cambiarlo.'
     : 'Estado de cada ejecutiva. Solo lectura.';
   const tbody = document.getElementById('equipoTabla');
@@ -2484,7 +2490,7 @@ function renderEquipo(){
       <td><span class="chip ${st.estado}">${info.label}</span></td>
       <td class="mono" style="color:var(--text-dim);">${st.fechaInicio ? fmtDate(st.fechaInicio) : '—'}</td>
       <td class="mono" style="color:var(--text-dim);">${st.fechaTermino ? fmtDate(st.fechaTermino) : '—'}</td>
-      <td>${IS_ADMIN ? `<button class="btn small btn-editar-equipo" data-ex="${escapeHtml(ex)}">Editar</button>` : ''}</td>
+      <td>${CAN_EDIT_ADMIN ? `<button class="btn small btn-editar-equipo" data-ex="${escapeHtml(ex)}">Editar</button>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -2773,6 +2779,11 @@ async function startApp(){
   populateMetasExecSelect();
   resetForm();
   resetTicketForm();
+  if(!CAN_EDIT_DATA){
+    document.getElementById('registrarActions').style.display = 'none';
+    document.getElementById('registrarReadOnlyNote').style.display = '';
+    document.getElementById('cardNuevoTicket').style.display = 'none';
+  }
   if(sheetsConfigured()){
     await loadData();
     updateAlertBadgeQuiet();
@@ -2803,6 +2814,10 @@ document.getElementById('adminPasswordInput').addEventListener('keydown', (e)=>{
 });
 
 (async function init(){
+  if(READ_ONLY_LINK){
+    await startApp();
+    return;
+  }
   if(!LOCKED_EXEC){
     document.querySelector('.app').style.display = 'none';
     const savedPw = sessionStorage.getItem('cav_admin_pw');
