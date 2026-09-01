@@ -312,7 +312,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="nav-item" data-view="tickets"><span class="nav-icon">🎫</span>Tickets</div>
       <div class="nav-item" data-view="planificacion"><span class="nav-icon">🗓</span>Planificación</div>
       <div class="nav-item" data-view="ofertas"><span class="nav-icon">🏷</span>Matriz de ofertas</div>
-      <div class="nav-item" data-view="equipo"><span class="nav-icon">👥</span>Equipo</div>
+      <div class="nav-item" data-view="equipo" id="navEquipo"><span class="nav-icon">👥</span>Equipo</div>
     </div>
     <div class="exec-box">
       <label id="execBoxLabel">Ejecutivo activo</label>
@@ -530,6 +530,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
           <span><span class="dot" style="background:var(--cerrado);"></span>Ventas cerradas</span>
         </div>
         <p style="font-size:11px;color:var(--text-faint);margin:10px 0 0;">"Ventas emitidas" incluye toda venta que alguna vez tuvo fecha de instalación, aunque después haya cambiado a Cerrado o Perdido — por eso siempre es mayor o igual a "Ventas cerradas".</p>
+        <p id="tendenciaNota" style="font-size:11px;color:var(--text-faint);margin:4px 0 0;"></p>
       </div>
 
       <div class="card" id="cardPorEjecutivo" style="margin-bottom:18px;">
@@ -1131,6 +1132,9 @@ function countMetric(monthPrefix, metric, execsInScope){
   return 0;
 }
 function renderComparativoMes(year, monthIdx, monthPrefix, execsInScope){
+  const now = new Date();
+  const isCurrentMonth = (year===now.getFullYear() && monthIdx===now.getMonth());
+  const ritmo = isCurrentMonth ? (now.getDate()/30) : 1;
   const prev = shiftMonth(year, monthIdx, -1);
   const prevPrefix = prev.year + '-' + pad2(prev.monthIdx+1);
   const metrics = [
@@ -1139,7 +1143,8 @@ function renderComparativoMes(year, monthIdx, monthPrefix, execsInScope){
     {key:'cerradas', label:'Ventas cerradas'}
   ];
   document.getElementById('comparativoMes').innerHTML = metrics.map(m=>{
-    const actual = countMetric(monthPrefix, m.key, execsInScope);
+    const actualReal = countMetric(monthPrefix, m.key, execsInScope);
+    const actual = (isCurrentMonth && ritmo>0) ? Math.round(actualReal/ritmo) : actualReal;
     const anterior = countMetric(prevPrefix, m.key, execsInScope);
     const delta = actual - anterior;
     const pct = anterior>0 ? Math.round(Math.abs(delta)/anterior*100) : (actual>0?100:0);
@@ -1147,22 +1152,28 @@ function renderComparativoMes(year, monthIdx, monthPrefix, execsInScope){
     const up = delta>0;
     const color = flat ? 'var(--text-dim)' : (up ? 'var(--cotizacion)' : 'var(--perdido)');
     const arrow = flat ? '→' : (up?'↑':'↓');
+    const label = m.label + (isCurrentMonth ? ' (proyectado)' : '');
+    const subExtra = isCurrentMonth ? ` · real a la fecha: ${actualReal}` : '';
     return `<div class="stat">
-      <div class="lbl">${m.label}</div>
+      <div class="lbl">${label}</div>
       <div class="val">${actual}</div>
-      <div class="sub" style="color:${color};">${arrow} ${pct}% vs mes anterior (${anterior})</div>
+      <div class="sub" style="color:${color};">${arrow} ${pct}% vs mes anterior (${anterior})${subExtra}</div>
     </div>`;
   }).join('');
 }
 function renderTendencia(year, monthIdx, execsInScope){
+  const now = new Date();
   const months = [];
   for(let i=5;i>=0;i--){ months.push(shiftMonth(year, monthIdx, -i)); }
+  const isCurMonthAt = months.map(m => m.year===now.getFullYear() && m.monthIdx===now.getMonth());
+  const ritmoNow = now.getDate()/30;
   const series = {ingresados:[], emitidas:[], cerradas:[]};
-  months.forEach(m=>{
+  months.forEach((m,idx)=>{
     const mp = m.year+'-'+pad2(m.monthIdx+1);
-    series.ingresados.push(countMetric(mp,'ingresados',execsInScope));
-    series.emitidas.push(countMetric(mp,'emitidas_historico',execsInScope));
-    series.cerradas.push(countMetric(mp,'cerradas',execsInScope));
+    const proj = (raw)=> (isCurMonthAt[idx] && ritmoNow>0) ? Math.round(raw/ritmoNow) : raw;
+    series.ingresados.push(proj(countMetric(mp,'ingresados',execsInScope)));
+    series.emitidas.push(proj(countMetric(mp,'emitidas_historico',execsInScope)));
+    series.cerradas.push(proj(countMetric(mp,'cerradas',execsInScope)));
   });
   const maxVal = Math.max(1, ...series.ingresados, ...series.emitidas, ...series.cerradas) * 1.15;
   const W=640,H=190,padL=32,padB=24,padT=12,padR=10;
@@ -1170,7 +1181,10 @@ function renderTendencia(year, monthIdx, execsInScope){
   function xAt(i){ return padL + (i/(months.length-1))*plotW; }
   function yAt(v){ return padT + plotH - (v/maxVal)*plotH; }
   function pointsFor(arr){ return arr.map((v,i)=>xAt(i)+','+yAt(v)).join(' '); }
-  const monthLabels = months.map(m=>new Date(m.year,m.monthIdx,1).toLocaleDateString('es-CL',{month:'short'}));
+  const monthLabels = months.map((m,idx)=>{
+    const base = new Date(m.year,m.monthIdx,1).toLocaleDateString('es-CL',{month:'short'});
+    return isCurMonthAt[idx] ? base+'*' : base;
+  });
   let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible;">`;
   for(let g=0; g<=4; g++){
     const y = padT + plotH - (g/4)*plotH;
@@ -1178,7 +1192,7 @@ function renderTendencia(year, monthIdx, execsInScope){
     svg += `<text x="${padL-6}" y="${y+3}" text-anchor="end" font-size="9" fill="var(--text-faint)" font-family="JetBrains Mono, monospace">${Math.round(maxVal*g/4)}</text>`;
   }
   months.forEach((m,i)=>{
-    svg += `<text x="${xAt(i)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--text-dim)">${monthLabels[i]}</text>`;
+    svg += `<text x="${xAt(i)}" y="${H-6}" text-anchor="middle" font-size="10" fill="${isCurMonthAt[i]?'var(--pendiente)':'var(--text-dim)'}">${monthLabels[i]}</text>`;
   });
   [
     {key:'ingresados', color:'var(--accent)'},
@@ -1187,11 +1201,19 @@ function renderTendencia(year, monthIdx, execsInScope){
   ].forEach(l=>{
     svg += `<polyline points="${pointsFor(series[l.key])}" fill="none" stroke="${l.color}" stroke-width="2.5"/>`;
     series[l.key].forEach((v,i)=>{
-      svg += `<circle cx="${xAt(i)}" cy="${yAt(v)}" r="3.2" fill="${l.color}"/>`;
+      if(isCurMonthAt[i]){
+        svg += `<circle cx="${xAt(i)}" cy="${yAt(v)}" r="4.2" fill="var(--surface)" stroke="${l.color}" stroke-width="2.5"/>`;
+      }else{
+        svg += `<circle cx="${xAt(i)}" cy="${yAt(v)}" r="3.2" fill="${l.color}"/>`;
+      }
     });
   });
   svg += `</svg>`;
   document.getElementById('tendenciaChart').innerHTML = svg;
+  const hasCurrentMonth = isCurMonthAt.some(v=>v);
+  document.getElementById('tendenciaNota').textContent = hasCurrentMonth
+    ? '* El mes marcado con asterisco (círculo hueco) muestra la proyección al ritmo actual, no el total final.'
+    : '';
 }
 
 function proyeccionColor(v){
@@ -1554,6 +1576,7 @@ function populateExecSelects(){
     document.getElementById('f-ejecutivo').disabled = true;
     document.getElementById('t-ejecutivo').disabled = true;
     document.getElementById('execBoxLabel').textContent = 'Tu vista personal';
+    document.getElementById('navEquipo').style.display = 'none';
   }
 }
 
