@@ -316,6 +316,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="nav-item" data-view="ofertas"><span class="nav-icon">🏷</span>Matriz de ofertas</div>
       <div class="nav-item" data-view="equipo" id="navEquipo"><span class="nav-icon">👥</span>Equipo</div>
       <div class="nav-item" id="btnAyudaMemoria" style="margin-top:6px;border-top:1px solid var(--border);padding-top:14px;"><span class="nav-icon">💡</span>Ayuda memoria</div>
+      <div class="nav-item" id="btnRefrescar"><span class="nav-icon">🔄</span>Actualizar ahora</div>
     </div>
     <div class="exec-box">
       <label id="execBoxLabel">Ejecutivo activo</label>
@@ -1684,22 +1685,37 @@ function populateExecSelects(){
   }
 }
 
-async function switchView(view){
+const RELOAD_THROTTLE_MS = 45000;
+let lastLoadTimes = {};
+async function ensureFresh(key, loaderFn, force){
+  const now = Date.now();
+  if(force || !lastLoadTimes[key] || (now - lastLoadTimes[key]) > RELOAD_THROTTLE_MS){
+    showToast('Actualizando...');
+    await loaderFn();
+    lastLoadTimes[key] = now;
+  }
+}
+
+async function switchView(view, forceRefresh){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+view));
-  if(view==='hoy'){ showToast('Actualizando...'); await loadData(); renderHoy(); }
-  if(view==='efectividad'){ showToast('Actualizando...'); await loadData(); renderEfectividad(); }
-  if(view==='contactabilidad'){ showToast('Actualizando...'); await loadData(); renderContactabilidad(); }
-  if(view==='alertas'){ showToast('Actualizando...'); await loadData(); renderAlertas(); }
-  if(view==='metas'){ showToast('Actualizando...'); await loadData(); await loadEquipoEstados(); renderMetas(); }
-  if(view==='eliminadas'){ showToast('Actualizando...'); await loadData(); renderEliminadas(); }
-  if(view==='tickets'){ showToast('Actualizando...'); await loadTickets(); renderTickets(); }
-  if(view==='planificacion'){ showToast('Actualizando...'); await loadPlanificacion(); renderPlanificacion(); }
-  if(view==='ofertas'){ showToast('Actualizando...'); await loadOfertas(); renderOfertas(); }
-  if(view==='equipo'){ showToast('Actualizando...'); await loadEquipoEstados(); renderEquipo(); }
+  if(view==='hoy'){ await ensureFresh('gestiones', loadData, forceRefresh); renderHoy(); }
+  if(view==='efectividad'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEfectividad(); }
+  if(view==='contactabilidad'){ await ensureFresh('gestiones', loadData, forceRefresh); renderContactabilidad(); }
+  if(view==='alertas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderAlertas(); }
+  if(view==='metas'){ await ensureFresh('gestiones', loadData, forceRefresh); await ensureFresh('equipo', loadEquipoEstados, forceRefresh); renderMetas(); }
+  if(view==='eliminadas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEliminadas(); }
+  if(view==='tickets'){ await ensureFresh('tickets', loadTickets, forceRefresh); renderTickets(); }
+  if(view==='planificacion'){ await ensureFresh('planificacion', loadPlanificacion, forceRefresh); renderPlanificacion(); }
+  if(view==='ofertas'){ await ensureFresh('ofertas', loadOfertas, forceRefresh); renderOfertas(); }
+  if(view==='equipo'){ await ensureFresh('equipo', loadEquipoEstados, forceRefresh); renderEquipo(); }
 }
 document.querySelectorAll('.nav-item[data-view]').forEach(item=>{
   item.addEventListener('click', ()=>switchView(item.dataset.view));
+});
+document.getElementById('btnRefrescar').addEventListener('click', ()=>{
+  const current = document.querySelector('.nav-item.active[data-view]');
+  switchView(current ? current.dataset.view : 'registrar', true);
 });
 document.getElementById('btnAyudaMemoria').addEventListener('click', ()=>{
   document.getElementById('modalAyudaMemoria').classList.add('open');
@@ -2705,6 +2721,7 @@ document.getElementById('modalEditTicketSave').addEventListener('click', async (
   document.getElementById('modalEditTicket').classList.remove('open');
   showToast('Cambios guardados.');
   await loadTickets();
+  lastLoadTimes['tickets'] = Date.now();
   renderTickets();
 });
 
@@ -2740,6 +2757,7 @@ document.getElementById('modalDeleteConfirm').addEventListener('click', async ()
   document.getElementById('modalDelete').classList.remove('open');
   showToast('Gestión eliminada.');
   await loadData();
+  lastLoadTimes['gestiones'] = Date.now();
   const activeView = document.querySelector('.nav-item.active').dataset.view;
   if(activeView==='hoy') renderHoy();
   if(activeView==='efectividad') renderEfectividad();
@@ -2846,6 +2864,7 @@ document.getElementById('modalEditSave').addEventListener('click', async ()=>{
   document.getElementById('modalEdit').classList.remove('open');
   showToast('Cambios guardados.');
   await loadData();
+  lastLoadTimes['gestiones'] = Date.now();
   const activeView = document.querySelector('.nav-item.active').dataset.view;
   if(activeView==='hoy') renderHoy();
   if(activeView==='efectividad') renderEfectividad();
@@ -2892,6 +2911,7 @@ async function startApp(){
   }
   if(sheetsConfigured()){
     await loadData();
+    lastLoadTimes['gestiones'] = Date.now();
     updateAlertBadgeQuiet();
   }else{
     document.getElementById('configWarning').style.display = 'block';
