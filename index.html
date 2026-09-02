@@ -313,6 +313,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="nav-item" data-view="planificacion"><span class="nav-icon">🗓</span>Planificación</div>
       <div class="nav-item" data-view="ofertas"><span class="nav-icon">🏷</span>Matriz de ofertas</div>
       <div class="nav-item" data-view="equipo" id="navEquipo"><span class="nav-icon">👥</span>Equipo</div>
+      <div class="nav-item" id="btnAyudaMemoria" style="margin-top:6px;border-top:1px solid var(--border);padding-top:14px;"><span class="nav-icon">💡</span>Ayuda memoria</div>
     </div>
     <div class="exec-box">
       <label id="execBoxLabel">Ejecutivo activo</label>
@@ -1062,6 +1063,46 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
   </div>
 </div>
 
+<div class="mini-modal" id="modalAyudaMemoria">
+  <div class="box" style="width:540px;">
+    <h3>📞 Los 5 pasos de la venta</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin:-6px 0 16px;">Ayuda memoria rápida para tener a mano durante la llamada.</p>
+    <div class="reco-item" style="border-left-color:var(--accent);">
+      <span class="reco-icon">1️⃣</span>
+      <div><strong>Presentación</strong><br>Quién soy y a qué vengo.
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"Hola, buenos días, le habla [Nombre] de [Empresa]. Le contacto porque tenemos disponible un beneficio para su sector, ¿tiene un minuto?"</div>
+      </div>
+    </div>
+    <div class="reco-item" style="border-left-color:var(--cerrado);">
+      <span class="reco-icon">2️⃣</span>
+      <div><strong>Sondeo</strong><br>Preguntas para saber cuál es el contexto del cliente.
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"¿Actualmente cuenta con internet en casa? ¿Con qué compañía? ¿Cuántas personas lo usan y para qué (trabajo, streaming, estudio)?"</div>
+      </div>
+    </div>
+    <div class="reco-item" style="border-left-color:var(--emitido);">
+      <span class="reco-icon">3️⃣</span>
+      <div><strong>Oferta</strong><br>Ofrecer un plan que se ajuste a las necesidades descubiertas en la etapa de sondeo.
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"Según lo que me cuenta, le conviene el plan [X] — tiene la velocidad que necesita para [lo que mencionó] y queda a $[precio] con el descuento vigente."</div>
+      </div>
+    </div>
+    <div class="reco-item" style="border-left-color:var(--pendiente);">
+      <span class="reco-icon">4️⃣</span>
+      <div><strong>Objeciones</strong><br>Respuesta a las posibles preguntas o cuestionamientos que pueda tener el cliente.
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"Entiendo su duda. Lo que le puedo asegurar es que [beneficio concreto: sin permanencia, portabilidad gratis, mismo número, etc.], así que no arriesga nada probando."</div>
+      </div>
+    </div>
+    <div class="reco-item" style="border-left-color:var(--cotizacion);">
+      <span class="reco-icon">5️⃣</span>
+      <div><strong>Cierre</strong><br>Cuando el cliente se queda sin más preguntas, decir una frase clave para buscar el cierre de la venta.
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"¿Lo dejamos activado hoy mismo entonces? Solo necesito confirmar un par de datos y quedaría listo."</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button class="btn ghost small" id="modalAyudaMemoriaCancel">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="mini-modal" id="modalDelete">
   <div class="box">
     <h3>Eliminar gestión</h3>
@@ -1600,8 +1641,14 @@ async function switchView(view){
   if(view==='ofertas'){ showToast('Actualizando...'); await loadOfertas(); renderOfertas(); }
   if(view==='equipo'){ showToast('Actualizando...'); await loadEquipoEstados(); renderEquipo(); }
 }
-document.querySelectorAll('.nav-item').forEach(item=>{
+document.querySelectorAll('.nav-item[data-view]').forEach(item=>{
   item.addEventListener('click', ()=>switchView(item.dataset.view));
+});
+document.getElementById('btnAyudaMemoria').addEventListener('click', ()=>{
+  document.getElementById('modalAyudaMemoria').classList.add('open');
+});
+document.getElementById('modalAyudaMemoriaCancel').addEventListener('click', ()=>{
+  document.getElementById('modalAyudaMemoria').classList.remove('open');
 });
 
 document.getElementById('ejecutivoActivo').addEventListener('change', (e)=>{
