@@ -202,6 +202,8 @@ tr:hover td{background:var(--surface-2);}
 .plan-cell .pc-turno{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;}
 .plan-cell .pc-lugar{font-size:12.5px;margin-top:2px;color:var(--text-dim);}
 .plan-cell .pc-schedule{font-size:10.5px;color:var(--accent);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.plan-cell .pc-target{font-size:10px;color:var(--emitido);margin-top:2px;font-weight:600;}
+.plan-name .pn-meta{display:block;font-size:10px;font-weight:400;color:var(--text-faint);margin-top:2px;}
 .plan-cell.filled .pc-lugar{color:var(--text);}
 .plan-obs-dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
 .reco-item{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:9px;background:var(--surface-2);border-left:3px solid var(--border);margin-bottom:8px;font-size:13px;}
@@ -739,6 +741,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
           </table>
         </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text-faint);">Haz clic en una celda con lugar asignado para ver la observación.</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text-faint);">🎯 Las metas de contactos (por día) y emisiones (por semana) están calculadas para llegar a 16 ventas cerradas al mes por ejecutiva — mismo modelo del embudo de ventas de la pestaña Metas. Carmen Sanchez: con licencia médica hasta el 21/09, meta aplica desde su reincorporación.</div>
       </div>
     </div>
 
@@ -1413,6 +1416,12 @@ function getScheduleLabel(ejecutivo, dia, turno){
 }
 function isDiaLibre(dia, turno){
   return dia === 'Domingo' || (dia === 'Sábado' && turno === 'PM');
+}
+const META_CONTACTOS_DIA = {'Lunes':6,'Martes':6,'Miércoles':6,'Jueves':6,'Viernes':6,'Sábado':5,'Domingo':0};
+const META_CONTACTOS_SEMANA_16 = 35;
+const META_EMISIONES_SEMANA_16 = 5;
+function getContactTarget(dia){
+  return META_CONTACTOS_DIA[dia] || 0;
 }
 const IS_ADMIN = !LOCKED_EXEC;
 const CAN_EDIT_ADMIN = !LOCKED_EXEC && !READ_ONLY_LINK;
@@ -2387,7 +2396,7 @@ function renderPlanificacion(){
   const tbody = document.getElementById('planBody');
   tbody.innerHTML = PLANIFICACION_EJECUTIVOS.map(ex=>{
     return `<tr>
-      <td class="plan-name" rowspan="2">${escapeHtml(ex)}</td>
+      <td class="plan-name" rowspan="2">${escapeHtml(ex)}<span class="pn-meta">🎯 ${META_CONTACTOS_SEMANA_16} contactos · ${META_EMISIONES_SEMANA_16} emisiones / semana</span></td>
       ${DIAS_SEMANA.map(d=>planCellHtml(ex,d,'AM')).join('')}
     </tr>
     <tr>
@@ -2410,10 +2419,12 @@ function planCellHtml(ejecutivo, dia, turno){
   const schedule = getScheduleLabel(ejecutivo, dia, turno);
   const libre = isDiaLibre(dia, turno);
   const placeholder = libre ? 'Día libre' : (CAN_EDIT_ADMIN ? '+ Agregar' : 'Sin asignar');
+  const target = (turno==='AM' && !libre) ? getContactTarget(dia) : 0;
   return `<td>
     <div class="plan-cell ${hasLugar?'filled':''}" data-ex="${escapeHtml(ejecutivo)}" data-dia="${dia}" data-turno="${turno}">
       <div class="pc-turno">${turno}</div>
       ${schedule ? `<div class="pc-schedule">${escapeHtml(schedule)}</div>` : ''}
+      ${target ? `<div class="pc-target">🎯 Meta: ${target} contactos</div>` : ''}
       <div class="pc-lugar">${hasLugar ? escapeHtml(cell.lugar) : placeholder}</div>
       ${hasObs ? '<div class="plan-obs-dot" title="Tiene observación"></div>' : ''}
     </div>
