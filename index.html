@@ -1070,13 +1070,28 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
     <div class="reco-item" style="border-left-color:var(--accent);">
       <span class="reco-icon">1️⃣</span>
       <div><strong>Presentación</strong><br>Quién soy y a qué vengo.
-        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"Hola, buenos días, le habla [Nombre] de [Empresa]. Le contacto porque tenemos disponible un beneficio para su sector, ¿tiene un minuto?"</div>
+        <div style="margin-top:8px;">
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">☎️ Llamada telefónica</div>
+          <div style="font-style:italic;color:var(--text-dim);margin-top:2px;">"Hola, buenos días, le habla [Nombre] de [Empresa]. Le contacto porque tenemos disponible un beneficio para su sector, ¿tiene un minuto?"</div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em;">🚪 Presencial</div>
+          <div style="font-style:italic;color:var(--text-dim);margin-top:2px;">"Buenos días, disculpe la interrupción. Mi nombre es [Nombre], vengo de parte de [Empresa] recorriendo el sector porque tenemos un beneficio disponible para su domicilio, ¿le puedo comentar en un minuto?"</div>
+        </div>
       </div>
     </div>
     <div class="reco-item" style="border-left-color:var(--cerrado);">
       <span class="reco-icon">2️⃣</span>
       <div><strong>Sondeo</strong><br>Preguntas para saber cuál es el contexto del cliente.
-        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"¿Actualmente cuenta con internet en casa? ¿Con qué compañía? ¿Cuántas personas lo usan y para qué (trabajo, streaming, estudio)?"</div>
+        <ul style="margin:8px 0 0;padding-left:18px;color:var(--text-dim);font-style:italic;">
+          <li>"¿Actualmente cuenta con internet en casa? ¿Con qué compañía?"</li>
+          <li>"¿Cuántas personas viven en el hogar y usan internet a diario?"</li>
+          <li>"¿Para qué lo usan principalmente: trabajo, estudio, streaming, juegos?"</li>
+          <li>"¿Ha tenido problemas de velocidad o cortes con su proveedor actual?"</li>
+          <li>"¿Cuánto está pagando actualmente por su plan?"</li>
+          <li>"¿Le interesaría sumar televisión, o solo internet?"</li>
+          <li>"¿Tiene línea móvil aparte, o le gustaría verla en conjunto con el hogar?"</li>
+        </ul>
       </div>
     </div>
     <div class="reco-item" style="border-left-color:var(--emitido);">
@@ -1088,13 +1103,21 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
     <div class="reco-item" style="border-left-color:var(--pendiente);">
       <span class="reco-icon">4️⃣</span>
       <div><strong>Objeciones</strong><br>Respuesta a las posibles preguntas o cuestionamientos que pueda tener el cliente.
-        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"Entiendo su duda. Lo que le puedo asegurar es que [beneficio concreto: sin permanencia, portabilidad gratis, mismo número, etc.], así que no arriesga nada probando."</div>
+        <ul style="margin:8px 0 0;padding-left:18px;color:var(--text-dim);">
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"Ya tengo internet y estoy conforme"</strong><br><span style="font-style:italic;">"Entiendo. ¿Me podría contar cuánto está pagando actualmente? Así le muestro si hay una diferencia a su favor, sin compromiso."</span></li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"Es muy caro"</strong><br><span style="font-style:italic;">"Le entiendo. Por eso justo tenemos el descuento vigente los primeros meses, que lo deja a $[precio] — bastante más accesible que el valor normal."</span></li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"No tengo tiempo ahora"</strong><br><span style="font-style:italic;">"Sin problema. ¿Le parece si le llamo a las [hora]? Solo necesito un par de minutos para dejarlo listo."</span></li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"Necesito consultarlo con mi familia"</strong><br><span style="font-style:italic;">"Totalmente válido. Le puedo reservar el beneficio y llamarlo mañana — eso sí, el precio promocional puede variar semana a semana, así que conviene decidir pronto."</span></li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"Tuve mala experiencia con la compañía antes"</strong><br><span style="font-style:italic;">"Lamento escuchar eso, cuénteme qué pasó. Quiero asegurarme de que esta vez sea distinto y ofrecerle una solución acorde."</span></li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text);font-style:normal;">"¿Y si después el precio sube mucho?"</strong><br><span style="font-style:italic;">"Buena pregunta. Al terminar la promoción vuelve al valor normal, pero tiene todo ese período para evaluar con calma, sin permanencia obligatoria."</span></li>
+          <li><strong style="color:var(--text);font-style:normal;">"No quiero cambiarme, es complicado"</strong><br><span style="font-style:italic;">"La portabilidad es gratuita y su número queda exactamente igual — nosotros hacemos todo el trámite, usted no tiene que hacer nada."</span></li>
+        </ul>
       </div>
     </div>
     <div class="reco-item" style="border-left-color:var(--cotizacion);">
       <span class="reco-icon">5️⃣</span>
       <div><strong>Cierre</strong><br>Cuando el cliente se queda sin más preguntas, decir una frase clave para buscar el cierre de la venta.
-        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"¿Lo dejamos activado hoy mismo entonces? Solo necesito confirmar un par de datos y quedaría listo."</div>
+        <div style="font-style:italic;color:var(--text-dim);margin-top:6px;">"¿Lo dejamos agendado entonces? Solo necesito confirmar un par de datos, y en un par de días pasa el técnico a dejarle todo instalado y funcionando."</div>
       </div>
     </div>
     <div style="margin-top:16px;display:flex;justify-content:flex-end;">
