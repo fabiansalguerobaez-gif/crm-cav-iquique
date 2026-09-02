@@ -1460,16 +1460,41 @@ function normalizeDate(v){
   const s = String(v);
   return s.length>=10 ? s.slice(0,10) : s;
 }
-function jsonp(url){
+function jsonp(url, retries){
+  if(retries === undefined) retries = 1;
   return new Promise((resolve, reject)=>{
     const cbName = 'jsonpcb_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
-    const cleanup = ()=>{ delete window[cbName]; script.remove(); };
-    window[cbName] = (data)=>{ resolve(data); cleanup(); };
-    script.src = url + (url.indexOf('?')>-1?'&':'?') + 'callback=' + cbName;
-    script.onerror = ()=>{ reject(new Error('jsonp_error')); cleanup(); };
+    let done = false;
+    let timer;
+    const cleanup = ()=>{ delete window[cbName]; script.remove(); clearTimeout(timer); };
+    function retryOrReject(){
+      if(retries>0){
+        jsonp(url, retries-1).then(resolve).catch(reject);
+      }else{
+        reject(new Error('jsonp_failed'));
+      }
+    }
+    window[cbName] = (data)=>{
+      if(done) return;
+      done = true;
+      cleanup();
+      resolve(data);
+    };
+    script.onerror = ()=>{
+      if(done) return;
+      done = true;
+      cleanup();
+      retryOrReject();
+    };
     document.body.appendChild(script);
-    setTimeout(()=>{ if(window[cbName]){ reject(new Error('jsonp_timeout')); cleanup(); } }, 12000);
+    script.src = url + (url.indexOf('?')>-1?'&':'?') + 'callback=' + cbName;
+    timer = setTimeout(()=>{
+      if(done) return;
+      done = true;
+      cleanup();
+      retryOrReject();
+    }, 20000);
   });
 }
 async function loadData(){
