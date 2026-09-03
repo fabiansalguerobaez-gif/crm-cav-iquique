@@ -357,6 +357,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
             <span class="err-msg">Ingresa el teléfono de contacto.</span>
           </div>
           <div class="field">
+            <label>Correo electrónico</label>
+            <input type="text" id="f-email" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="field">
             <label>Dirección</label>
             <input type="text" id="f-direccion" placeholder="Calle y número">
           </div>
@@ -371,6 +375,25 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
               <option>DUO</option>
               <option>FMC</option>
               <option>MOVIL</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Plan</label>
+            <select id="f-plan">
+              <option value="">Selecciona (opcional)...</option>
+            </select>
+          </div>
+          <div class="field" id="grp-planPromocion" style="display:none;">
+            <label>Promoción del plan</label>
+            <select id="f-planPromocion"></select>
+          </div>
+          <div class="field">
+            <label>Fecha de pago</label>
+            <select id="f-fechaPago">
+              <option value="">Selecciona (opcional)...</option>
+              <option value="Ciclo 1">Ciclo 1</option>
+              <option value="Ciclo 12">Ciclo 12</option>
+              <option value="Ciclo 19">Ciclo 19</option>
             </select>
           </div>
           <div class="field">
@@ -848,6 +871,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <input type="text" id="edit-telefono">
       </div>
       <div class="field">
+        <label>Correo electrónico</label>
+        <input type="text" id="edit-email">
+      </div>
+      <div class="field">
         <label>Dirección</label>
         <input type="text" id="edit-direccion">
       </div>
@@ -862,6 +889,25 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
           <option>DUO</option>
           <option>FMC</option>
           <option>MOVIL</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Plan</label>
+        <select id="edit-plan">
+          <option value="">Selecciona (opcional)...</option>
+        </select>
+      </div>
+      <div class="field" id="edit-grp-planPromocion" style="display:none;">
+        <label>Promoción del plan</label>
+        <select id="edit-planPromocion"></select>
+      </div>
+      <div class="field">
+        <label>Fecha de pago</label>
+        <select id="edit-fechaPago">
+          <option value="">Selecciona (opcional)...</option>
+          <option value="Ciclo 1">Ciclo 1</option>
+          <option value="Ciclo 12">Ciclo 12</option>
+          <option value="Ciclo 19">Ciclo 19</option>
         </select>
       </div>
       <div class="field">
@@ -1152,7 +1198,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzp_VLG2uBeg05uivra99iG99erv4lJn1hOhFk-Fh-4us2hZuRfR-1zsOr3FzAxm2D98Q/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCUa7FDoCn-srPQf5v5L0DDTej8ZuKFa6UVg-dGuSkH1Oc-2RAcCXkDWpH4hgrAKhoVA/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -1518,8 +1564,9 @@ async function loadData(){
     const raw = await jsonp(SCRIPT_URL);
     const mapped = raw.map(r=>({
       id: r.id, ejecutivo: r.ejecutivo, fecha: normalizeDate(r.fecha),
-      nombre: r.nombre, rut: r.rut, telefono: r.telefono, direccion: r.direccion,
-      comuna: r.comuna, producto: r.producto, estado: r.estado,
+      nombre: r.nombre, rut: r.rut, telefono: r.telefono, email: r.email, direccion: r.direccion,
+      comuna: r.comuna, producto: r.producto, plan: r.plan, planPromocion: r.planPromocion,
+      fechaPago: r.fechaPago, estado: r.estado,
       proximaFecha: normalizeDate(r.proximaFecha), comentario: r.comentario,
       fechaCierre: normalizeDate(r.fechaCierre), numeroOrden: r.numeroOrden,
       fechaInstalacion: normalizeDate(r.fechaInstalacion),
@@ -1707,7 +1754,7 @@ async function switchView(view, forceRefresh){
   if(view==='eliminadas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEliminadas(); }
   if(view==='tickets'){ await ensureFresh('tickets', loadTickets, forceRefresh); renderTickets(); }
   if(view==='planificacion'){ await ensureFresh('planificacion', loadPlanificacion, forceRefresh); renderPlanificacion(); }
-  if(view==='ofertas'){ await ensureFresh('ofertas', loadOfertas, forceRefresh); renderOfertas(); }
+  if(view==='ofertas'){ await ensureFresh('ofertas', loadOfertas, forceRefresh); populatePlanSelects(); renderOfertas(); }
   if(view==='equipo'){ await ensureFresh('equipo', loadEquipoEstados, forceRefresh); renderEquipo(); }
 }
 document.querySelectorAll('.nav-item[data-view]').forEach(item=>{
@@ -1743,9 +1790,14 @@ function resetForm(){
   document.getElementById('f-nombre').value = '';
   document.getElementById('f-rut').value = '';
   document.getElementById('f-telefono').value = '';
+  document.getElementById('f-email').value = '';
   document.getElementById('f-direccion').value = '';
   document.getElementById('f-comuna').value = '';
   document.getElementById('f-producto').value = 'NAKED';
+  document.getElementById('f-plan').value = '';
+  document.getElementById('f-planPromocion').value = '';
+  document.getElementById('grp-planPromocion').style.display = 'none';
+  document.getElementById('f-fechaPago').value = '';
   document.getElementById('f-estado').value = 'pendiente';
   document.getElementById('f-proxima').value = '';
   document.getElementById('f-comentario').value = '';
@@ -1778,9 +1830,13 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   const nombre = document.getElementById('f-nombre').value.trim();
   const rut = document.getElementById('f-rut').value.trim();
   const telefono = document.getElementById('f-telefono').value.trim();
+  const email = document.getElementById('f-email').value.trim();
   const direccion = document.getElementById('f-direccion').value.trim();
   const comuna = document.getElementById('f-comuna').value.trim();
   const producto = document.getElementById('f-producto').value;
+  const plan = document.getElementById('f-plan').value;
+  const planPromocion = document.getElementById('f-planPromocion').value;
+  const fechaPago = document.getElementById('f-fechaPago').value;
   const estado = document.getElementById('f-estado').value;
   const proxima = document.getElementById('f-proxima').value;
   const comentario = document.getElementById('f-comentario').value.trim();
@@ -1805,8 +1861,8 @@ document.getElementById('btnGuardar').addEventListener('click', async ()=>{
   }
 
   const record = {
-    id: uid(), ejecutivo, fecha: todayISO(), nombre, rut, telefono, direccion, comuna,
-    producto, estado, proximaFecha: proxima, comentario,
+    id: uid(), ejecutivo, fecha: todayISO(), nombre, rut, telefono, email, direccion, comuna,
+    producto, plan, planPromocion, fechaPago, estado, proximaFecha: proxima, comentario,
     fechaCierre: estado==='cerrado' ? fechaCierre : '',
     fechaInstalacion: estado==='emitido' ? fechaInstalacion : '',
     numeroOrden: estado==='emitido' ? numeroOrden : '',
@@ -2485,6 +2541,32 @@ function fmtMoney(v){
   return n.toLocaleString('es-CL');
 }
 
+function populatePlanSelects(){
+  const nombres = [...new Set(ofertas.map(o=>o.nombreCrm).filter(Boolean))].sort();
+  const opts = '<option value="">Selecciona (opcional)...</option>' + nombres.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  document.getElementById('f-plan').innerHTML = opts;
+  document.getElementById('edit-plan').innerHTML = opts;
+}
+function updatePlanPromocion(planSelectId, promoGrpId, promoSelectId, selectedNombre, presetPromo){
+  const matches = ofertas.filter(o=>o.nombreCrm===selectedNombre);
+  const grp = document.getElementById(promoGrpId);
+  const sel = document.getElementById(promoSelectId);
+  if(selectedNombre && matches.length>1){
+    sel.innerHTML = '<option value="">Selecciona (opcional)...</option>' + matches.map(o=>`<option value="${escapeHtml(o.promocion)}">${escapeHtml(o.promocion)}</option>`).join('');
+    if(presetPromo) sel.value = presetPromo;
+    grp.style.display = '';
+  }else{
+    sel.innerHTML = '';
+    grp.style.display = 'none';
+  }
+}
+document.getElementById('f-plan').addEventListener('change', ()=>{
+  updatePlanPromocion('f-plan','grp-planPromocion','f-planPromocion', document.getElementById('f-plan').value);
+});
+document.getElementById('edit-plan').addEventListener('change', ()=>{
+  updatePlanPromocion('edit-plan','edit-grp-planPromocion','edit-planPromocion', document.getElementById('edit-plan').value);
+});
+
 function renderOfertas(){
   document.getElementById('ofertasHint').textContent = CAN_EDIT_ADMIN
     ? 'Ofertas disponibles del mes. Puedes agregar, editar o eliminar.'
@@ -2532,6 +2614,7 @@ document.getElementById('btnGuardarOferta').addEventListener('click', async ()=>
   document.getElementById('btnGuardarOferta').disabled = false;
   if(ok){
     ofertas.push(payload);
+    populatePlanSelects();
     showToast('Oferta agregada.');
     ['of-tipo','of-descripcion','of-crm','of-promocion','of-lleno','of-descuento','of-precioFinal','of-boNameTnt','of-precio','of-precioFinal2'].forEach(id=>document.getElementById(id).value='');
     renderOfertas();
@@ -2564,6 +2647,7 @@ document.addEventListener('click', async (e)=>{
     const ok = await saveOferta({action:'delete', id: delBtn.dataset.id});
     if(ok){
       ofertas = ofertas.filter(o=>o.id!==delBtn.dataset.id);
+      populatePlanSelects();
       showToast('Oferta eliminada.');
       renderOfertas();
     }
@@ -2593,6 +2677,7 @@ document.getElementById('modalEditOfertaSave').addEventListener('click', async (
   if(ok){
     const idx = ofertas.findIndex(o=>o.id===editOfertaTargetId);
     if(idx>-1) ofertas[idx] = Object.assign({}, ofertas[idx], {tipoOferta, descripcionPlan, nombreCrm, promocion, lleno, descuento, precioFinal, boNameTnt, precio, precioFinal2});
+    populatePlanSelects();
     showToast('Oferta actualizada.');
     document.getElementById('modalEditOferta').classList.remove('open');
     renderOfertas();
@@ -2798,9 +2883,13 @@ document.addEventListener('click', (e)=>{
   document.getElementById('edit-nombre').value = record.nombre || '';
   document.getElementById('edit-rut').value = record.rut || '';
   document.getElementById('edit-telefono').value = record.telefono || '';
+  document.getElementById('edit-email').value = record.email || '';
   document.getElementById('edit-direccion').value = record.direccion || '';
   document.getElementById('edit-comuna').value = record.comuna || '';
   document.getElementById('edit-producto').value = record.producto || 'NAKED';
+  document.getElementById('edit-plan').value = record.plan || '';
+  updatePlanPromocion('edit-plan','edit-grp-planPromocion','edit-planPromocion', record.plan || '', record.planPromocion || '');
+  document.getElementById('edit-fechaPago').value = record.fechaPago || '';
   document.getElementById('edit-estado').value = record.estado || 'pendiente';
   document.getElementById('edit-proxima').value = record.proximaFecha || '';
   document.getElementById('edit-fechaCierre').value = record.fechaCierre || '';
@@ -2818,9 +2907,13 @@ document.getElementById('modalEditSave').addEventListener('click', async ()=>{
   const nombre = document.getElementById('edit-nombre').value.trim();
   const rut = document.getElementById('edit-rut').value.trim();
   const telefono = document.getElementById('edit-telefono').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
   const direccion = document.getElementById('edit-direccion').value.trim();
   const comuna = document.getElementById('edit-comuna').value.trim();
   const producto = document.getElementById('edit-producto').value;
+  const plan = document.getElementById('edit-plan').value;
+  const planPromocion = document.getElementById('edit-planPromocion').value;
+  const fechaPago = document.getElementById('edit-fechaPago').value;
   const estado = document.getElementById('edit-estado').value;
   const proxima = document.getElementById('edit-proxima').value;
   const fechaCierre = document.getElementById('edit-fechaCierre').value;
@@ -2846,7 +2939,7 @@ document.getElementById('modalEditSave').addEventListener('click', async ()=>{
   document.getElementById('modalEditSave').disabled = true;
   const payload = {
     action:'update', id: editTargetId,
-    ejecutivo, nombre, rut, telefono, direccion, comuna, producto, comentario,
+    ejecutivo, nombre, rut, telefono, email, direccion, comuna, producto, plan, planPromocion, fechaPago, comentario,
     estado, proximaFecha: proxima
   };
   payload.fechaCierre = (estado==='cerrado') ? fechaCierre : undefined;
@@ -2912,6 +3005,9 @@ async function startApp(){
   if(sheetsConfigured()){
     await loadData();
     lastLoadTimes['gestiones'] = Date.now();
+    await loadOfertas();
+    lastLoadTimes['ofertas'] = Date.now();
+    populatePlanSelects();
     updateAlertBadgeQuiet();
   }else{
     document.getElementById('configWarning').style.display = 'block';
