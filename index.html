@@ -1047,6 +1047,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <input type="text" id="plan-lugar" placeholder="Ej: Sector Norte, Iquique">
     </div>
     <div class="field" style="margin-top:12px;">
+      <label>Horario (opcional — reemplaza el automático)</label>
+      <input type="text" id="plan-horario" placeholder="Ej: Entrada 10:00 am">
+    </div>
+    <div class="field" style="margin-top:12px;">
       <label>Observación (oculta)</label>
       <textarea id="plan-obs" style="min-height:70px;" placeholder="Solo visible al hacer clic..."></textarea>
     </div>
@@ -1205,7 +1209,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxugUcobHsIQaRlA7-Dm5gAjuji7JZojUXn6V6NzwUSzgjrMCqWEuz1KvbfbOM2c9M7ig/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznE4bJjbyYaJzWYrzoIkJhaZ9B1fuSz6acXDcX9WG93oRcxvHpZgzoTkqcY-eMTvHPaA/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -1502,6 +1506,10 @@ const META_EMISIONES_SEMANA_16 = 5;
 function getContactTarget(dia){
   return META_CONTACTOS_DIA[dia] || 0;
 }
+function countContactsForDay(ejecutivo, fechaStr){
+  if(!fechaStr) return 0;
+  return gestiones.filter(g=>g.ejecutivo===ejecutivo && g.producto!=='MOVIL' && g.fecha===fechaStr).length;
+}
 const IS_ADMIN = !LOCKED_EXEC;
 const CAN_EDIT_ADMIN = !LOCKED_EXEC && !READ_ONLY_LINK;
 const CAN_EDIT_DATA = !READ_ONLY_LINK;
@@ -1671,11 +1679,11 @@ async function loadPlanificacion(){
     raw.forEach(r=>{
       const semana = normalizeDate(r.semana) || getCurrentWeekMonday();
       const key = planCellId(r.ejecutivo, semana, r.dia, r.turno);
-      planificacion[key] = {lugar: r.lugar||'', observacion: r.observacion||'', serverId: r.id, semana};
+      planificacion[key] = {lugar: r.lugar||'', observacion: r.observacion||'', horario: r.horario||'', serverId: r.id, semana};
     });
   }catch(e){ showToast('No se pudo cargar la planificación.'); planificacion = {}; }
 }
-async function savePlanCell(id, ejecutivo, semana, dia, turno, lugar, observacion){
+async function savePlanCell(id, ejecutivo, semana, dia, turno, lugar, observacion, horario){
   if(!sheetsConfigured()){
     showToast('Falta configurar la URL de Google Sheets en el código.');
     return false;
@@ -1685,7 +1693,7 @@ async function savePlanCell(id, ejecutivo, semana, dia, turno, lugar, observacio
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({sheet:'planificacion', id, ejecutivo, semana, dia, turno, lugar, observacion, updatedAt: Date.now(), password: ADMIN_PASSWORD_VERIFIED})
+      body: JSON.stringify({sheet:'planificacion', id, ejecutivo, semana, dia, turno, lugar, observacion, horario, updatedAt: Date.now(), password: ADMIN_PASSWORD_VERIFIED})
     });
     return true;
   }catch(e){ showToast('No se pudo guardar la planificación.'); return false; }
@@ -2505,20 +2513,23 @@ function renderPlanificacion(){
   document.getElementById('btnPlanNextWeek').style.display = isNavAllowed ? '' : 'none';
 
   const monday = new Date(weekToShow+'T00:00:00');
-  const headerRow = document.getElementById('planHeaderRow');
-  headerRow.innerHTML = '<th>Ejecutiva</th>' + DIAS_SEMANA.map((d,i)=>{
+  const diasConFecha = DIAS_SEMANA.map((d,i)=>{
     const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-    return `<th>${d}<br><span style="font-weight:400;font-size:9.5px;color:var(--text-faint);">${pad2b(dt.getDate())}/${pad2b(dt.getMonth()+1)}</span></th>`;
+    return {dia:d, fecha: isoDateOf(dt), label: pad2b(dt.getDate())+'/'+pad2b(dt.getMonth()+1)};
+  });
+  const headerRow = document.getElementById('planHeaderRow');
+  headerRow.innerHTML = '<th>Ejecutiva</th>' + diasConFecha.map(({dia,label})=>{
+    return `<th>${dia}<br><span style="font-weight:400;font-size:9.5px;color:var(--text-faint);">${label}</span></th>`;
   }).join('');
 
   const tbody = document.getElementById('planBody');
   tbody.innerHTML = PLANIFICACION_EJECUTIVOS.map(ex=>{
     return `<tr>
       <td class="plan-name" rowspan="2">${escapeHtml(ex)}<span class="pn-meta">🎯 ${META_CONTACTOS_SEMANA_16} contactos · ${META_EMISIONES_SEMANA_16} emisiones / semana</span></td>
-      ${DIAS_SEMANA.map(d=>planCellHtml(ex,weekToShow,d,'AM')).join('')}
+      ${diasConFecha.map(({dia,fecha})=>planCellHtml(ex,weekToShow,dia,'AM',fecha)).join('')}
     </tr>
     <tr>
-      ${DIAS_SEMANA.map(d=>planCellHtml(ex,weekToShow,d,'PM')).join('')}
+      ${diasConFecha.map(({dia,fecha})=>planCellHtml(ex,weekToShow,dia,'PM',fecha)).join('')}
     </tr>`;
   }).join('');
 
@@ -2537,20 +2548,27 @@ document.getElementById('btnPlanNextWeek').addEventListener('click', ()=>{
   renderPlanificacion();
 });
 
-function planCellHtml(ejecutivo, semana, dia, turno){
+function planCellHtml(ejecutivo, semana, dia, turno, fechaCol){
   const id = planCellId(ejecutivo, semana, dia, turno);
-  const cell = planificacion[id] || {lugar:'', observacion:''};
+  const cell = planificacion[id] || {lugar:'', observacion:'', horario:''};
   const hasLugar = !!cell.lugar;
   const hasObs = !!cell.observacion;
-  const schedule = getScheduleLabel(ejecutivo, dia, turno);
+  const defaultSchedule = getScheduleLabel(ejecutivo, dia, turno);
+  const schedule = cell.horario || defaultSchedule;
   const libre = isDiaLibre(dia, turno);
   const placeholder = libre ? 'Día libre' : (CAN_EDIT_ADMIN ? '+ Agregar' : 'Sin asignar');
   const target = (turno==='AM' && !libre) ? getContactTarget(dia) : 0;
+  let targetHtml = '';
+  if(target){
+    const actual = countContactsForDay(ejecutivo, fechaCol);
+    const ok = actual>=target;
+    targetHtml = `<div class="pc-target" style="color:${ok?'var(--cotizacion)':'var(--emitido)'};">🎯 ${actual}/${target} contactos</div>`;
+  }
   return `<td>
     <div class="plan-cell ${hasLugar?'filled':''}" data-ex="${escapeHtml(ejecutivo)}" data-semana="${semana}" data-dia="${dia}" data-turno="${turno}">
       <div class="pc-turno">${turno}</div>
       ${schedule ? `<div class="pc-schedule">${escapeHtml(schedule)}</div>` : ''}
-      ${target ? `<div class="pc-target">🎯 Meta: ${target} contactos</div>` : ''}
+      ${targetHtml}
       <div class="pc-lugar">${hasLugar ? escapeHtml(cell.lugar) : placeholder}</div>
       ${hasObs ? '<div class="plan-obs-dot" title="Tiene observación"></div>' : ''}
     </div>
@@ -2560,15 +2578,19 @@ function planCellHtml(ejecutivo, semana, dia, turno){
 let planCellTarget = null;
 function openPlanCellModal(ejecutivo, semana, dia, turno){
   const localId = planCellId(ejecutivo,semana,dia,turno);
-  const cell = planificacion[localId] || {lugar:'', observacion:''};
+  const cell = planificacion[localId] || {lugar:'', observacion:'', horario:''};
   planCellTarget = {ejecutivo, semana, dia, turno, id: cell.serverId || localId};
   document.getElementById('planCellTitle').textContent = `${ejecutivo} · ${dia} ${turno} (${fmtWeekLabel(semana)})`;
   const lugarInput = document.getElementById('plan-lugar');
   const obsInput = document.getElementById('plan-obs');
+  const horarioInput = document.getElementById('plan-horario');
   lugarInput.value = cell.lugar;
   obsInput.value = cell.observacion;
+  horarioInput.value = cell.horario || '';
+  horarioInput.placeholder = getScheduleLabel(ejecutivo, dia, turno) || 'Sin horario automático';
   lugarInput.disabled = !CAN_EDIT_ADMIN;
   obsInput.disabled = !CAN_EDIT_ADMIN;
+  horarioInput.disabled = !CAN_EDIT_ADMIN;
   document.getElementById('modalPlanSave').style.display = CAN_EDIT_ADMIN ? '' : 'none';
   document.getElementById('modalPlanCell').classList.add('open');
 }
@@ -2579,12 +2601,13 @@ document.getElementById('modalPlanSave').addEventListener('click', async ()=>{
   if(!planCellTarget || !CAN_EDIT_ADMIN) return;
   const lugar = document.getElementById('plan-lugar').value.trim();
   const observacion = document.getElementById('plan-obs').value.trim();
+  const horario = document.getElementById('plan-horario').value.trim();
   document.getElementById('modalPlanSave').disabled = true;
-  const ok = await savePlanCell(planCellTarget.id, planCellTarget.ejecutivo, planCellTarget.semana, planCellTarget.dia, planCellTarget.turno, lugar, observacion);
+  const ok = await savePlanCell(planCellTarget.id, planCellTarget.ejecutivo, planCellTarget.semana, planCellTarget.dia, planCellTarget.turno, lugar, observacion, horario);
   document.getElementById('modalPlanSave').disabled = false;
   if(ok){
     const localKey = planCellId(planCellTarget.ejecutivo, planCellTarget.semana, planCellTarget.dia, planCellTarget.turno);
-    planificacion[localKey] = {lugar, observacion, serverId: planCellTarget.id, semana: planCellTarget.semana};
+    planificacion[localKey] = {lugar, observacion, horario, serverId: planCellTarget.id, semana: planCellTarget.semana};
     showToast('Planificación guardada.');
     document.getElementById('modalPlanCell').classList.remove('open');
     renderPlanificacion();
