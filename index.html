@@ -1780,8 +1780,9 @@ function populateExecSelects(){
   const list = LOCKED_EXEC ? [LOCKED_EXEC] : EJECUTIVOS;
   const opts = list.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
   document.getElementById('ejecutivoActivo').innerHTML = opts;
-  document.getElementById('f-ejecutivo').innerHTML = (LOCKED_EXEC ? '' : '<option value="">Selecciona...</option>') + opts;
-  document.getElementById('t-ejecutivo').innerHTML = (LOCKED_EXEC ? '' : '<option value="">Selecciona...</option>') + opts;
+  const adminOpt = CAN_EDIT_ADMIN ? '<option value="Administración">— Registrado por Administración (reasignar después) —</option>' : '';
+  document.getElementById('f-ejecutivo').innerHTML = (LOCKED_EXEC ? '' : '<option value="">Selecciona...</option>') + adminOpt + opts;
+  document.getElementById('t-ejecutivo').innerHTML = (LOCKED_EXEC ? '' : '<option value="">Selecciona...</option>') + adminOpt + opts;
   document.getElementById('et-ejecutivo').innerHTML = opts;
   if(LOCKED_EXEC){
     document.getElementById('ejecutivoActivo').disabled = true;
@@ -2964,7 +2965,8 @@ let editTargetId = null;
 
 function populateEditEjecutivoSelect(){
   const sel = document.getElementById('edit-ejecutivo');
-  sel.innerHTML = EJECUTIVOS.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
+  const adminOpt = CAN_EDIT_ADMIN ? '<option value="Administración">— Administración (sin asignar) —</option>' : '';
+  sel.innerHTML = adminOpt + EJECUTIVOS.map(e=>`<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
 }
 populateEditEjecutivoSelect();
 
