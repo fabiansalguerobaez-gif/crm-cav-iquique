@@ -277,11 +277,34 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 
 @media(max-width:800px){
   .app{flex-direction:column;}
-  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:14px;}
-  .brand{width:100%;}
-  .nav{flex-direction:row;flex-wrap:wrap;}
-  .exec-box{border-top:none;padding-top:0;width:100%;}
-  .main{padding:20px;}
+  .sidebar{width:100%;height:auto;position:relative;padding:10px 0 0;}
+  .brand{width:100%;padding:0 14px;margin-bottom:8px;}
+  .nav{
+    flex-direction:row;flex-wrap:nowrap;overflow-x:auto;
+    gap:4px;padding:0 14px 10px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .nav::-webkit-scrollbar{display:none;}
+  .nav-item{flex-shrink:0;white-space:nowrap;padding:8px 11px;font-size:12.5px;}
+  .nav-item[style*="border-top"]{border-top:none !important;margin-top:0 !important;padding-top:8px !important;border-left:1px solid var(--border);padding-left:12px !important;}
+  .exec-box{border-top:1px solid var(--border);padding-top:10px;width:100%;padding-left:14px;padding-right:14px;}
+  .main{padding:14px;}
+  .card{padding:14px;}
+  .form-grid{gap:10px;}
+  table{font-size:12px;}
+  th{font-size:9.5px;padding:6px 7px;}
+  td{padding:7px;}
+  .stat{padding:11px 12px;}
+  .stat .val{font-size:21px;}
+  .page-head h2{font-size:17px;}
+  .plan-table th,.plan-table td{min-width:100px;}
+}
+@media(max-width:480px){
+  .grid-4{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:1fr;}
+  .grid-2{grid-template-columns:1fr;}
+  .mini-modal .box{padding:16px;}
+  .btn{font-size:12.5px;padding:8px 13px;}
 }
 </style>
 </head>
@@ -451,10 +474,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="tabs-filter" id="hoyExecFilter"></div>
       <div class="grid grid-4" id="hoyStats" style="margin-bottom:22px;"></div>
       <div class="card">
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Hora</th><th>Ejecutivo</th><th>Cliente</th><th>Producto</th><th>Estado</th><th>Próximo</th></tr></thead>
           <tbody id="hoyTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="hoyEmpty" style="display:none;">Aún no hay gestiones registradas hoy.</div>
       </div>
     </div>
@@ -471,10 +496,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <div class="pill-filter" id="ctMonthClear">Todos los meses</div>
       </div>
       <div class="card">
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Estado</th><th>Últimas gestiones</th><th>Último contacto</th><th>Próximo</th><th></th></tr></thead>
           <tbody id="ctTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="ctEmpty" style="display:none;">No hay clientes registrados todavía.</div>
       </div>
     </div>
@@ -621,10 +648,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 
       <div class="card">
         <div class="section-title" style="margin-top:0;">Últimos emitidos</div>
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Fecha cierre</th><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>N° orden</th></tr></thead>
           <tbody id="emitidosTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="emitidosEmpty" style="display:none;">Sin órdenes emitidas todavía.</div>
       </div>
     </div>
@@ -635,10 +664,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <p>Registros eliminados desde Contactabilidad, con el motivo indicado.</p>
       </div>
       <div class="card">
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Estado (al eliminar)</th><th>Motivo</th><th>Eliminado el</th></tr></thead>
           <tbody id="eliminadasTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="eliminadasEmpty" style="display:none;">No hay gestiones eliminadas.</div>
       </div>
     </div>
@@ -721,10 +752,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       <div class="tabs-filter" id="ticketsExecFilter"></div>
       <div class="card">
         <div class="section-title" style="margin-top:0;">Tickets registrados</div>
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Fecha</th><th>Ejecutivo</th><th>Tipo</th><th>Rut</th><th>Dirección</th><th>Comuna</th><th>N° ticket</th><th>Estado</th><th></th></tr></thead>
           <tbody id="ticketsTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="ticketsEmpty" style="display:none;">No hay tickets registrados.</div>
       </div>
     </div>
@@ -824,10 +857,12 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
       <div class="tabs-filter" id="equipoEstadoFilter"></div>
       <div class="card">
+        <div style="overflow-x:auto;">
         <table>
           <thead><tr><th>Ejecutiva</th><th>Estado</th><th>Desde</th><th>Hasta</th><th></th></tr></thead>
           <tbody id="equipoTabla"></tbody>
         </table>
+        </div>
         <div class="empty" id="equipoEmpty" style="display:none;">No hay ejecutivas con ese estado.</div>
       </div>
       <p style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">Las ejecutivas en Licencia Médica Extendida o Desvinculado no se consideran en el cálculo de la meta grupal (pestaña Metas) mientras dure ese estado.</p>
