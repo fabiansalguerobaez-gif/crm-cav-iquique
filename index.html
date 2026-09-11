@@ -1983,9 +1983,9 @@ function renderHoy(){
   }).join('');
 }
 
-function buildExecFilterPills(containerId, currentVal, onSelect){
+function buildExecFilterPills(containerId, currentVal, onSelect, extraOptions){
   const box = document.getElementById(containerId);
-  const opts = [{v:'all',l:'Todos'}, ...EJECUTIVOS.map(e=>({v:e,l:e}))];
+  const opts = [{v:'all',l:'Todos'}, ...EJECUTIVOS.map(e=>({v:e,l:e})), ...(extraOptions||[])];
   box.innerHTML = opts.map(o=>`<div class="pill-filter ${o.v===currentVal?'active':''}" data-val="${escapeHtml(o.v)}">${escapeHtml(o.l)}</div>`).join('');
   box.querySelectorAll('.pill-filter').forEach(p=>{
     p.addEventListener('click', ()=>{ onSelect(p.dataset.val); });
@@ -1998,7 +1998,7 @@ function renderContactabilidad(){
     document.getElementById('ctExecFilter').style.display = 'none';
   }else{
     document.getElementById('ctExecFilter').style.display = '';
-    buildExecFilterPills('ctExecFilter', ctExecSel, (val)=>{ ctExecSel = val; renderContactabilidad(); });
+    buildExecFilterPills('ctExecFilter', ctExecSel, (val)=>{ ctExecSel = val; renderContactabilidad(); }, !LOCKED_EXEC ? [{v:'Administración', l:'⚠ Administración'}] : []);
   }
   if(!ctEstadoSel) ctEstadoSel = 'all';
   const estadoOpts = [{v:'all',l:'Todos los estados'}, ...ESTADOS.map(e=>({v:e.key,l:e.label}))];
