@@ -866,6 +866,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <div class="empty" id="equipoEmpty" style="display:none;">No hay ejecutivas con ese estado.</div>
       </div>
       <p style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">Las ejecutivas en Licencia Médica Extendida o Desvinculado no se consideran en el cálculo de la meta grupal (pestaña Metas) mientras dure ese estado.</p>
+      <div id="reasignarBox" style="display:none;margin-top:14px;">
+        <button class="btn small" id="btnReasignarDesvinculados">🔄 Reasignar contactos de Licencia Extendida / Desvinculados a Administración</button>
+        <p style="font-size:11px;color:var(--text-faint);margin-top:6px;">Desde ahora esto ocurre automáticamente al cambiar el estado de alguien. Usa este botón solo si necesitas forzar una reasignación retroactiva (por ejemplo, si cambiaste un estado antes de tener esta función).</p>
+      </div>
     </div>
 
   </div>
@@ -1239,7 +1243,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz26E1_oum6xo8t0CGgD71YgIPX6E9dcB5VsddfhzoQmVmh_MWKo3ygEb7HsYWt7JXqwg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmSUrBbKtAjb2pIN4UO3tu-pPfuwQLp6Zh_tFk4jO2CnSHTznRlFAM_oHrP8S_BLKmBQ/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -2537,6 +2541,30 @@ function renderPlanificacion(){
     });
   });
 }
+document.getElementById('btnReasignarDesvinculados').addEventListener('click', async ()=>{
+  if(!CAN_EDIT_ADMIN) return;
+  if(!confirm('¿Reasignar a "Administración" todos los contactos de ejecutivas actualmente en Licencia Médica Extendida o Desvinculado? Esta acción no se puede deshacer.')) return;
+  document.getElementById('btnReasignarDesvinculados').disabled = true;
+  try{
+    const resp = await fetch(SCRIPT_URL, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({sheet:'gestiones', action:'reassignByStatus', password: ADMIN_PASSWORD_VERIFIED})
+    });
+    showToast('Reasignación enviada. Actualizando...');
+    await new Promise(r=>setTimeout(r, 1500));
+    await loadData();
+    lastLoadTimes['gestiones'] = Date.now();
+    showToast('Contactos reasignados a Administración.');
+    const activeView = document.querySelector('.nav-item.active').dataset.view;
+    if(activeView==='contactabilidad') renderContactabilidad();
+    if(activeView==='metas') renderMetas();
+  }catch(e){
+    showToast('No se pudo completar la reasignación.');
+  }
+  document.getElementById('btnReasignarDesvinculados').disabled = false;
+});
 document.getElementById('btnEditarMetaGrupal').addEventListener('click', ()=>{
   document.getElementById('metaGrupal-valor').value = configData['metaGrupalCerradas'] || '';
   document.getElementById('modalMetaGrupal').classList.add('open');
@@ -2809,6 +2837,7 @@ function renderEquipo(){
   document.getElementById('equipoHint').textContent = CAN_EDIT_ADMIN
     ? 'Estado de cada ejecutiva. Haz clic en Editar para cambiarlo.'
     : 'Estado de cada ejecutiva. Solo lectura.';
+  document.getElementById('reasignarBox').style.display = CAN_EDIT_ADMIN ? '' : 'none';
 
   document.getElementById('equipoEstadoFilter').innerHTML = EQUIPO_ESTADOS.map(e=>
     `<div class="pill-filter ${equipoEstadoFiltro.has(e.key)?'active':''}" data-val="${e.key}">${e.label}</div>`
@@ -2885,7 +2914,13 @@ document.getElementById('modalEditEquipoSave').addEventListener('click', async (
   document.getElementById('modalEditEquipoSave').disabled = false;
   if(ok){
     equipoEstados[editEquipoTarget] = {estado, fechaInicio, fechaTermino};
-    showToast('Estado actualizado.');
+    if(estado==='licencia_medica_extendida' || estado==='desvinculado'){
+      showToast('Estado actualizado. Reasignando sus contactos a Administración...');
+      await loadData();
+      lastLoadTimes['gestiones'] = Date.now();
+    }else{
+      showToast('Estado actualizado.');
+    }
     document.getElementById('modalEditEquipo').classList.remove('open');
     renderEquipo();
   }
