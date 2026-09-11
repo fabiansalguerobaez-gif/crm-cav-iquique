@@ -1223,7 +1223,8 @@ const ESTADOS = [
 ];
 const EST_MAP = Object.fromEntries(ESTADOS.map(e=>[e.key,e]));
 const urlParams = new URLSearchParams(window.location.search);
-const LOCKED_EXEC = (urlParams.get('ejecutivo') && EJECUTIVOS.includes(urlParams.get('ejecutivo'))) ? urlParams.get('ejecutivo') : null;
+const LINKS_DESACTIVADOS = ['Astrid Caro','Milly Villalobos','Ana Maria Calderon'];
+const LOCKED_EXEC = (urlParams.get('ejecutivo') && EJECUTIVOS.includes(urlParams.get('ejecutivo')) && !LINKS_DESACTIVADOS.includes(urlParams.get('ejecutivo'))) ? urlParams.get('ejecutivo') : null;
 const READ_ONLY_LINK = !LOCKED_EXEC && urlParams.get('vista') === 'lectura';
 
 const META_INDIVIDUAL = 13;
