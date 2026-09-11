@@ -306,7 +306,6 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
     <div class="nav">
       <div class="nav-item active" data-view="registrar"><span class="nav-icon">＋</span>Nueva gestión</div>
       <div class="nav-item" data-view="hoy"><span class="nav-icon">◷</span>Panel del día</div>
-      <div class="nav-item" data-view="efectividad"><span class="nav-icon">▤</span>Efectividad</div>
       <div class="nav-item" data-view="contactabilidad"><span class="nav-icon">∿</span>Contactabilidad</div>
       <div class="nav-item" data-view="alertas"><span class="nav-icon">!</span>Alertas<span class="nav-badge" id="alertBadge" style="display:none;">0</span></div>
       <div class="nav-item" data-view="metas"><span class="nav-icon">◆</span>Metas</div>
@@ -460,35 +459,6 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
     </div>
 
-    <div class="view" id="view-efectividad">
-      <div class="page-head">
-        <h2>Efectividad</h2>
-        <p>Cierres, pérdidas y avance del pipeline.</p>
-      </div>
-      <div class="tabs-filter" id="efExecFilter"></div>
-      <div class="tabs-filter" id="efRangeFilter">
-        <div class="pill-filter" data-range="7">7 días</div>
-        <div class="pill-filter active" data-range="30">30 días</div>
-        <div class="pill-filter" data-range="90">90 días</div>
-        <div class="pill-filter" data-range="9999">Todo</div>
-      </div>
-      <div class="grid grid-4" id="efStats" style="margin-bottom:22px;"></div>
-      <div class="grid grid-2">
-        <div class="card">
-          <div class="section-title" style="margin-top:0;">Distribución por estado</div>
-          <div id="efBars"></div>
-        </div>
-        <div class="card">
-          <div class="section-title" style="margin-top:0;">Ranking por cierres <span style="font-weight:400;text-transform:none;color:var(--text-faint);font-size:11px;">(excluye Móvil)</span></div>
-          <table>
-            <thead><tr><th>Ejecutivo</th><th>Gestiones</th><th>Cerrados</th><th>% Cierre</th></tr></thead>
-            <tbody id="efRanking"></tbody>
-          </table>
-          <div class="empty" id="efRankingEmpty" style="display:none;">Sin datos en el período.</div>
-        </div>
-      </div>
-    </div>
-
     <div class="view" id="view-contactabilidad">
       <div class="page-head">
         <h2>Contactabilidad</h2>
@@ -496,6 +466,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
       <div class="tabs-filter" id="ctExecFilter"></div>
       <div class="tabs-filter" id="ctEstadoFilter"></div>
+      <div class="tabs-filter" style="align-items:center;">
+        <input type="month" id="ctMonthFilter" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:12.5px;font-family:'Inter',sans-serif;">
+        <div class="pill-filter" id="ctMonthClear">Todos los meses</div>
+      </div>
       <div class="card">
         <table>
           <thead><tr><th>Cliente</th><th>Ejecutivo</th><th>Producto</th><th>Estado</th><th>Últimas gestiones</th><th>Último contacto</th><th>Próximo</th><th></th></tr></thead>
@@ -544,7 +518,10 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="section-title" style="margin-top:0;" id="metaCierreTitle">Meta de cierre mensual</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="section-title" style="margin-top:0;" id="metaCierreTitle">Meta de cierre mensual</div>
+          <button class="btn small" id="btnEditarMetaGrupal" style="display:none;">✏️ Editar meta grupal</button>
+        </div>
         <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Proyección: (ventas cerradas del mes ÷ (día del mes ÷ 30)).</p>
         <div class="grid grid-4" id="cierreStats"></div>
       </div>
@@ -845,11 +822,13 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <h2>Equipo</h2>
         <p id="equipoHint">Estado de cada ejecutiva.</p>
       </div>
+      <div class="tabs-filter" id="equipoEstadoFilter"></div>
       <div class="card">
         <table>
           <thead><tr><th>Ejecutiva</th><th>Estado</th><th>Desde</th><th>Hasta</th><th></th></tr></thead>
           <tbody id="equipoTabla"></tbody>
         </table>
+        <div class="empty" id="equipoEmpty" style="display:none;">No hay ejecutivas con ese estado.</div>
       </div>
       <p style="font-size:11.5px;color:var(--text-faint);margin-top:10px;">Las ejecutivas en Licencia Médica Extendida o Desvinculado no se consideran en el cálculo de la meta grupal (pestaña Metas) mientras dure ese estado.</p>
     </div>
@@ -951,6 +930,22 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn ghost small" id="modalEditCancel">Cancelar</button>
       <button class="btn primary small" id="modalEditSave">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="mini-modal" id="modalMetaGrupal">
+  <div class="box">
+    <h3>Meta grupal de ventas cerradas</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin:-6px 0 14px;">Por defecto se calcula automáticamente (13 × ejecutivos activos). Aquí puedes fijar un número manual que reemplace ese cálculo.</p>
+    <div class="field">
+      <label>Meta manual</label>
+      <input type="number" id="metaGrupal-valor" min="1" placeholder="Ej: 91">
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn ghost small" id="metaGrupalAuto">Usar automática</button>
+      <button class="btn ghost small" id="modalMetaGrupalCancel">Cancelar</button>
+      <button class="btn primary small" id="modalMetaGrupalSave">Guardar</button>
     </div>
   </div>
 </div>
@@ -1209,7 +1204,7 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
 <div id="printSummary"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznE4bJjbyYaJzWYrzoIkJhaZ9B1fuSz6acXDcX9WG93oRcxvHpZgzoTkqcY-eMTvHPaA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz26E1_oum6xo8t0CGgD71YgIPX6E9dcB5VsddfhzoQmVmh_MWKo3ygEb7HsYWt7JXqwg/exec';
 const EJECUTIVOS = ['Ana Maria Calderon','Anggie Vasquez','Astrid Caro','Carmen Sanchez','Milly Villalobos','Silvia Herrera','Zianott Vicencio'];
 const PRODUCTOS = ['NAKED','DUO','FMC','MOVIL'];
 const TICKET_TIPOS = ['Vacancia','Creación'];
@@ -1373,11 +1368,11 @@ function embudoStageBar(label, actual, meta, proy, color){
   </div>`;
 }
 
-function renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth, goalCount){
+function renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth, goalCount, metaCerradasOverride){
   const n = goalCount!==undefined ? goalCount : execsInScope.length;
   const metaContactos = META_EMBUDO_CONTACTOS_MES * n;
   const metaEmision = META_EMBUDO_EMISION_MES * n;
-  const metaCerradas = META_INDIVIDUAL * n;
+  const metaCerradas = (metaCerradasOverride && metaCerradasOverride>0) ? metaCerradasOverride : META_INDIVIDUAL * n;
 
   const contactosActual = countMetric(monthPrefix, 'ingresados', execsInScope);
   const emitidasActual = countMetric(monthPrefix, 'emitidas_historico', execsInScope);
@@ -1458,6 +1453,7 @@ function fmtWeekLabel(weekIso){
   return 'Semana del ' + fmt(start) + ' al ' + fmt(end);
 }
 let ofertas = [];
+let configData = {};
 let equipoEstados = {};
 const EQUIPO_ESTADOS = [
   {key:'activo', label:'Activo', color:'#7BD98C'},
@@ -1515,8 +1511,7 @@ const CAN_EDIT_ADMIN = !LOCKED_EXEC && !READ_ONLY_LINK;
 const CAN_EDIT_DATA = !READ_ONLY_LINK;
 let ADMIN_PASSWORD_VERIFIED = null;
 function planCellId(ejecutivo, semana, dia, turno){ return ejecutivo+'||'+semana+'||'+dia+'||'+turno; }
-let efRange = 30;
-let efExecSel = 'all';
+let ctMonthSel = '';
 let ctExecSel = 'all';
 let ctEstadoSel = 'all';
 
@@ -1726,6 +1721,30 @@ async function saveOferta(payload){
   }catch(e){ showToast('No se pudo guardar la oferta.'); return false; }
 }
 
+async function loadConfig(){
+  if(!sheetsConfigured()){ configData = {}; return; }
+  try{
+    const raw = await jsonp(SCRIPT_URL + '?sheet=config');
+    configData = {};
+    raw.forEach(r=>{ configData[r.clave] = r.valor; });
+  }catch(e){ configData = {}; }
+}
+async function saveConfig(clave, valor){
+  if(!sheetsConfigured()){
+    showToast('Falta configurar la URL de Google Sheets en el código.');
+    return false;
+  }
+  try{
+    await fetch(SCRIPT_URL, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({sheet:'config', clave, valor, password: ADMIN_PASSWORD_VERIFIED})
+    });
+    return true;
+  }catch(e){ showToast('No se pudo guardar la configuración.'); return false; }
+}
+
 async function loadEquipoEstados(){
   if(!sheetsConfigured()){ equipoEstados = {}; return; }
   try{
@@ -1789,10 +1808,9 @@ async function switchView(view, forceRefresh){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+view));
   if(view==='hoy'){ await ensureFresh('gestiones', loadData, forceRefresh); renderHoy(); }
-  if(view==='efectividad'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEfectividad(); }
   if(view==='contactabilidad'){ await ensureFresh('gestiones', loadData, forceRefresh); renderContactabilidad(); }
   if(view==='alertas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderAlertas(); }
-  if(view==='metas'){ await ensureFresh('gestiones', loadData, forceRefresh); await ensureFresh('equipo', loadEquipoEstados, forceRefresh); renderMetas(); }
+  if(view==='metas'){ await ensureFresh('gestiones', loadData, forceRefresh); await ensureFresh('equipo', loadEquipoEstados, forceRefresh); await ensureFresh('config', loadConfig, forceRefresh); renderMetas(); }
   if(view==='eliminadas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEliminadas(); }
   if(view==='tickets'){ await ensureFresh('tickets', loadTickets, forceRefresh); renderTickets(); }
   if(view==='planificacion'){ await ensureFresh('planificacion', loadPlanificacion, forceRefresh); renderPlanificacion(); }
@@ -1972,73 +1990,6 @@ function buildExecFilterPills(containerId, currentVal, onSelect){
   });
 }
 
-function renderEfectividad(){
-  if(LOCKED_EXEC){
-    efExecSel = LOCKED_EXEC;
-    document.getElementById('efExecFilter').style.display = 'none';
-  }else{
-    document.getElementById('efExecFilter').style.display = '';
-    buildExecFilterPills('efExecFilter', efExecSel, (val)=>{ efExecSel = val; renderEfectividad(); });
-  }
-  document.querySelectorAll('#efRangeFilter .pill-filter').forEach(p=>{
-    p.classList.toggle('active', Number(p.dataset.range)===efRange);
-    p.onclick = ()=>{ efRange = Number(p.dataset.range); renderEfectividad(); };
-  });
-
-  const cutoff = efRange>=9999 ? -Infinity : -efRange;
-  let list = gestiones.filter(g=> daysDiff(g.fecha) >= cutoff && daysDiff(g.fecha) <= 0);
-  if(efExecSel!=='all') list = list.filter(g=>g.ejecutivo===efExecSel);
-
-  const total = list.length;
-  const listCierre = list.filter(g=>g.producto!=='MOVIL');
-  const totalCierre = listCierre.length;
-  const cerrados = listCierre.filter(g=>g.estado==='cerrado').length;
-  const perdidos = list.filter(g=>g.estado==='perdido').length;
-  const cotizacion = list.filter(g=>g.estado==='enviada_cotizacion').length;
-  const tasaCierre = totalCierre? Math.round(cerrados/totalCierre*100):0;
-
-  document.getElementById('efStats').innerHTML = `
-    <div class="stat"><div class="lbl">Gestiones</div><div class="val">${total}</div><div class="sub">en el período</div></div>
-    <div class="stat cotizacion"><div class="lbl">Cotizaciones</div><div class="val">${cotizacion}</div><div class="sub">enviadas</div></div>
-    <div class="stat cerrado"><div class="lbl">Cierre</div><div class="val">${tasaCierre}%</div><div class="sub">${cerrados} cerrados · excluye Móvil</div></div>
-    <div class="stat perdido"><div class="lbl">Perdidos</div><div class="val">${perdidos}</div><div class="sub">${total? Math.round(perdidos/total*100):0}% del total</div></div>
-  `;
-
-  const barsBox = document.getElementById('efBars');
-  if(total===0){
-    barsBox.innerHTML = '<div class="empty">Sin gestiones en el período seleccionado.</div>';
-  }else{
-    barsBox.innerHTML = ESTADOS.map(e=>{
-      const count = list.filter(g=>g.estado===e.key).length;
-      const pct = total? Math.round(count/total*100):0;
-      return `<div class="bar-row">
-        <div class="bl">${e.label}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${e.color};"></div></div>
-        <div class="bn">${count}</div>
-      </div>`;
-    }).join('');
-  }
-
-  const rankBody = document.getElementById('efRanking');
-  const execsForRank = LOCKED_EXEC ? [LOCKED_EXEC] : (efExecSel==='all' ? EJECUTIVOS : [efExecSel]);
-  const rows = execsForRank.map(ex=>{
-    const el = list.filter(g=>g.ejecutivo===ex);
-    const elCierre = el.filter(g=>g.producto!=='MOVIL');
-    const t = el.length;
-    const tCierre = elCierre.length;
-    const c = elCierre.filter(g=>g.estado==='cerrado').length;
-    const pct = tCierre? Math.round(c/tCierre*100):0;
-    return {ex,t,c,pct};
-  }).filter(r=>r.t>0).sort((a,b)=>b.c-a.c || b.pct-a.pct);
-  document.getElementById('efRankingEmpty').style.display = rows.length? 'none':'block';
-  rankBody.innerHTML = rows.map(r=>`<tr>
-    <td>${escapeHtml(r.ex)}</td>
-    <td class="mono">${r.t}</td>
-    <td class="mono" style="color:var(--cerrado);">${r.c}</td>
-    <td class="mono">${r.pct}%</td>
-  </tr>`).join('');
-}
-
 function renderContactabilidad(){
   if(LOCKED_EXEC){
     ctExecSel = LOCKED_EXEC;
@@ -2053,6 +2004,7 @@ function renderContactabilidad(){
   document.querySelectorAll('#ctEstadoFilter .pill-filter').forEach(p=>{
     p.addEventListener('click', ()=>{ ctEstadoSel = p.dataset.val; renderContactabilidad(); });
   });
+  document.getElementById('ctMonthFilter').value = ctMonthSel;
 
   const byClient = {};
   gestiones.forEach(g=>{
@@ -2066,6 +2018,10 @@ function renderContactabilidad(){
   });
   if(ctExecSel!=='all') entries = entries.filter(list=>list[0].ejecutivo===ctExecSel);
   if(ctEstadoSel!=='all') entries = entries.filter(list=>list[list.length-1].estado===ctEstadoSel);
+  if(ctMonthSel) entries = entries.filter(list=>{
+    const last = list[list.length-1];
+    return last.fecha && last.fecha.startsWith(ctMonthSel);
+  });
   entries.sort((a,b)=>b[b.length-1].createdAt - a[a.length-1].createdAt);
 
   const tbody = document.getElementById('ctTabla');
@@ -2235,20 +2191,25 @@ function renderMetas(){
 
   const cerradasMes = gestiones.filter(g => g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo));
   const ventasActuales = cerradasMes.length;
-  const meta = selectedExec==='all' ? META_INDIVIDUAL * activeGoalCount : META_INDIVIDUAL;
+  const metaAutomatica = META_INDIVIDUAL * activeGoalCount;
+  const metaManualVal = Number(configData['metaGrupalCerradas']);
+  const metaManual = (configData['metaGrupalCerradas'] && !isNaN(metaManualVal) && metaManualVal>0) ? metaManualVal : null;
+  const meta = selectedExec==='all' ? (metaManual || metaAutomatica) : META_INDIVIDUAL;
   const ritmo = dayOfMonth / 30;
-  renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth, selectedExec==='all'?activeGoalCount:1);
+  renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth, selectedExec==='all' ? activeGoalCount : 1, (selectedExec==='all' ? metaManual : null));
   const proyeccion = ritmo > 0 ? (ventasActuales / ritmo) : ventasActuales;
   const cumplimientoProyectado = meta>0 ? (proyeccion / meta * 100) : 0;
 
+  document.getElementById('btnEditarMetaGrupal').style.display = (CAN_EDIT_ADMIN && selectedExec==='all') ? '' : 'none';
+
   document.getElementById('metaCierreTitle').textContent = selectedExec==='all'
-    ? 'Meta de cierre mensual — Equipo (meta grupal: ' + meta + ')'
+    ? 'Meta de cierre mensual — Equipo (meta grupal: ' + meta + (metaManual?' · manual':'') + ')'
     : 'Meta de cierre mensual — ' + selectedExec + ' (meta: ' + meta + ')';
 
   document.getElementById('cierreStats').innerHTML = `
     <div class="stat"><div class="lbl">Ventas cerradas (mes)</div><div class="val">${ventasActuales}</div><div class="sub">al día ${dayOfMonth} de ${totalDiasMes}</div></div>
     <div class="stat"><div class="lbl">Proyección fin de mes</div><div class="val" style="color:var(--emitido);">${proyeccion.toFixed(1)}</div><div class="sub">al ritmo actual</div></div>
-    <div class="stat"><div class="lbl">Meta</div><div class="val" style="color:var(--cerrado);">${meta}</div><div class="sub">${selectedExec==='all' ? META_INDIVIDUAL+' × '+activeGoalCount+' ejecutivos' : 'individual mensual'}</div></div>
+    <div class="stat"><div class="lbl">Meta</div><div class="val" style="color:var(--cerrado);">${meta}</div><div class="sub">${selectedExec==='all' ? (metaManual ? 'fijada manualmente' : META_INDIVIDUAL+' × '+activeGoalCount+' ejecutivos') : 'individual mensual'}</div></div>
     <div class="stat"><div class="lbl">Cumplimiento proyectado</div><div class="val" style="color:${cumplimientoProyectado>=100?'var(--cotizacion)':(cumplimientoProyectado>=80?'var(--pendiente)':'var(--perdido)')};">${Math.round(cumplimientoProyectado)}%</div><div class="sub">proyección vs meta</div></div>
   `;
 
@@ -2539,6 +2500,49 @@ function renderPlanificacion(){
     });
   });
 }
+document.getElementById('btnEditarMetaGrupal').addEventListener('click', ()=>{
+  document.getElementById('metaGrupal-valor').value = configData['metaGrupalCerradas'] || '';
+  document.getElementById('modalMetaGrupal').classList.add('open');
+});
+document.getElementById('modalMetaGrupalCancel').addEventListener('click', ()=>{
+  document.getElementById('modalMetaGrupal').classList.remove('open');
+});
+document.getElementById('metaGrupalAuto').addEventListener('click', async ()=>{
+  document.getElementById('metaGrupalAuto').disabled = true;
+  const ok = await saveConfig('metaGrupalCerradas', '');
+  document.getElementById('metaGrupalAuto').disabled = false;
+  if(ok){
+    configData['metaGrupalCerradas'] = '';
+    showToast('Meta grupal vuelta a automática.');
+    document.getElementById('modalMetaGrupal').classList.remove('open');
+    renderMetas();
+  }
+});
+document.getElementById('modalMetaGrupalSave').addEventListener('click', async ()=>{
+  const val = document.getElementById('metaGrupal-valor').value.trim();
+  if(!val || Number(val)<=0){
+    showToast('Ingresa un número válido mayor a 0.');
+    return;
+  }
+  document.getElementById('modalMetaGrupalSave').disabled = true;
+  const ok = await saveConfig('metaGrupalCerradas', val);
+  document.getElementById('modalMetaGrupalSave').disabled = false;
+  if(ok){
+    configData['metaGrupalCerradas'] = val;
+    showToast('Meta grupal actualizada.');
+    document.getElementById('modalMetaGrupal').classList.remove('open');
+    renderMetas();
+  }
+});
+
+document.getElementById('ctMonthFilter').addEventListener('change', (e)=>{
+  ctMonthSel = e.target.value;
+  renderContactabilidad();
+});
+document.getElementById('ctMonthClear').addEventListener('click', ()=>{
+  ctMonthSel = '';
+  renderContactabilidad();
+});
 document.getElementById('btnPlanPrevWeek').addEventListener('click', ()=>{
   planWeekStart = shiftWeek(planWeekStart || getCurrentWeekMonday(), -1);
   renderPlanificacion();
@@ -2763,12 +2767,35 @@ document.getElementById('modalEditOfertaSave').addEventListener('click', async (
   }
 });
 
+let equipoEstadoFiltro = new Set();
 function renderEquipo(){
   document.getElementById('equipoHint').textContent = CAN_EDIT_ADMIN
     ? 'Estado de cada ejecutiva. Haz clic en Editar para cambiarlo.'
     : 'Estado de cada ejecutiva. Solo lectura.';
+
+  document.getElementById('equipoEstadoFilter').innerHTML = EQUIPO_ESTADOS.map(e=>
+    `<div class="pill-filter ${equipoEstadoFiltro.has(e.key)?'active':''}" data-val="${e.key}">${e.label}</div>`
+  ).join('');
+  document.querySelectorAll('#equipoEstadoFilter .pill-filter').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      const val = p.dataset.val;
+      if(equipoEstadoFiltro.has(val)) equipoEstadoFiltro.delete(val);
+      else equipoEstadoFiltro.add(val);
+      renderEquipo();
+    });
+  });
+
+  let list = EJECUTIVOS;
+  if(equipoEstadoFiltro.size>0){
+    list = list.filter(ex=>{
+      const st = equipoEstados[ex] || {estado:'activo'};
+      return equipoEstadoFiltro.has(st.estado);
+    });
+  }
+
   const tbody = document.getElementById('equipoTabla');
-  tbody.innerHTML = EJECUTIVOS.map(ex=>{
+  document.getElementById('equipoEmpty').style.display = list.length? 'none':'block';
+  tbody.innerHTML = list.map(ex=>{
     const st = equipoEstados[ex] || {estado:'activo', fechaInicio:'', fechaTermino:''};
     const info = EQUIPO_EST_MAP[st.estado] || {label:st.estado};
     return `<tr>
