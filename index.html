@@ -1767,7 +1767,7 @@ async function loadConfig(){
     const raw = await jsonp(SCRIPT_URL + '?sheet=config');
     configData = {};
     raw.forEach(r=>{ configData[r.clave] = r.valor; });
-  }catch(e){ configData = {}; }
+  }catch(e){ showToast('No se pudo cargar la configuración.'); configData = {}; }
 }
 async function saveConfig(clave, valor){
   if(!sheetsConfigured()){
@@ -1797,7 +1797,7 @@ async function loadEquipoEstados(){
         fechaTermino: normalizeDate(r.fechaTermino)
       };
     });
-  }catch(e){ equipoEstados = {}; }
+  }catch(e){ showToast('No se pudo cargar el estado del equipo.'); equipoEstados = {}; }
 }
 async function saveEquipoEstado(ejecutivo, estado, fechaInicio, fechaTermino){
   if(!sheetsConfigured()){
@@ -1851,7 +1851,14 @@ async function switchView(view, forceRefresh){
   if(view==='hoy'){ await ensureFresh('gestiones', loadData, forceRefresh); renderHoy(); }
   if(view==='contactabilidad'){ await ensureFresh('gestiones', loadData, forceRefresh); renderContactabilidad(); }
   if(view==='alertas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderAlertas(); }
-  if(view==='metas'){ await ensureFresh('gestiones', loadData, forceRefresh); await ensureFresh('equipo', loadEquipoEstados, forceRefresh); await ensureFresh('config', loadConfig, forceRefresh); renderMetas(); }
+  if(view==='metas'){
+    await Promise.all([
+      ensureFresh('gestiones', loadData, forceRefresh),
+      ensureFresh('equipo', loadEquipoEstados, forceRefresh),
+      ensureFresh('config', loadConfig, forceRefresh)
+    ]);
+    renderMetas();
+  }
   if(view==='eliminadas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEliminadas(); }
   if(view==='tickets'){ await ensureFresh('tickets', loadTickets, forceRefresh); renderTickets(); }
   if(view==='planificacion'){ await ensureFresh('planificacion', loadPlanificacion, forceRefresh); renderPlanificacion(); }
@@ -3182,10 +3189,10 @@ async function startApp(){
     document.getElementById('cardNuevoTicket').style.display = 'none';
   }
   if(sheetsConfigured()){
-    await loadData();
-    lastLoadTimes['gestiones'] = Date.now();
-    await loadOfertas();
-    lastLoadTimes['ofertas'] = Date.now();
+    const loadStart = Date.now();
+    await Promise.all([loadData(), loadOfertas()]);
+    lastLoadTimes['gestiones'] = loadStart;
+    lastLoadTimes['ofertas'] = loadStart;
     populatePlanSelects();
     updateAlertBadgeQuiet();
   }else{
