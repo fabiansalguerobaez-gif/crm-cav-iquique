@@ -1273,7 +1273,7 @@ let metasExecSel = LOCKED_EXEC || 'all';
 let metasMonthSel = null;
 function pad2(n){ return String(n).padStart(2,'0'); }
 function daysInMonth(year, monthIdx){ return new Date(year, monthIdx+1, 0).getDate(); }
-function dateForCierre(g){ return g.fechaCierre || g.fecha; }
+function dateForCierre(g){ return g.fechaCierre || g.fechaInstalacion || g.fecha; }
 function shiftMonth(year, monthIdx, delta){
   const d = new Date(year, monthIdx + delta, 1);
   return {year: d.getFullYear(), monthIdx: d.getMonth()};
@@ -1286,7 +1286,7 @@ function countMetric(monthPrefix, metric, execsInScope){
     return gestiones.filter(g=>g.estado==='emitido' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
   }
   if(metric==='emitidas_historico'){
-    return gestiones.filter(g=>g.fechaInstalacion && g.producto!=='MOVIL' && g.fechaInstalacion.startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
+    return gestiones.filter(g=>g.fechaInstalacion && g.producto!=='MOVIL' && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
   }
   if(metric==='cerradas'){
     return gestiones.filter(g=>g.estado==='cerrado' && g.producto!=='MOVIL' && dateForCierre(g) && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
@@ -1417,7 +1417,7 @@ function renderEmbudo(execsInScope, monthPrefix, ritmo, dayOfMonth, goalCount, m
   const contactosActual = countMetric(monthPrefix, 'ingresados', execsInScope);
   const emitidasActual = countMetric(monthPrefix, 'emitidas_historico', execsInScope);
   const cerradasActual = countMetric(monthPrefix, 'cerradas', execsInScope);
-  const perdidasPostEmision = gestiones.filter(g=>g.estado==='perdido' && g.fechaInstalacion && g.producto!=='MOVIL' && g.fechaInstalacion.startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
+  const perdidasPostEmision = gestiones.filter(g=>g.estado==='perdido' && g.fechaInstalacion && g.producto!=='MOVIL' && dateForCierre(g).startsWith(monthPrefix) && execsInScope.includes(g.ejecutivo)).length;
 
   const proyContactos = ritmo>0 ? contactosActual/ritmo : contactosActual;
   const proyEmision = ritmo>0 ? emitidasActual/ritmo : emitidasActual;
