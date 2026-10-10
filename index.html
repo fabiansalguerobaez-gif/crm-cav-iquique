@@ -1874,7 +1874,7 @@ async function switchView(view, forceRefresh){
   }
   if(view==='eliminadas'){ await ensureFresh('gestiones', loadData, forceRefresh); renderEliminadas(); }
   if(view==='tickets'){ await ensureFresh('tickets', loadTickets, forceRefresh); renderTickets(); }
-  if(view==='planificacion'){ await ensureFresh('planificacion', loadPlanificacion, forceRefresh); renderPlanificacion(); }
+  if(view==='planificacion'){ await Promise.all([ensureFresh('planificacion', loadPlanificacion, forceRefresh), ensureFresh('equipo', loadEquipoEstados, forceRefresh)]); renderPlanificacion(); }
   if(view==='ofertas'){ await ensureFresh('ofertas', loadOfertas, forceRefresh); populatePlanSelects(); renderOfertas(); }
   if(view==='equipo'){ await ensureFresh('equipo', loadEquipoEstados, forceRefresh); renderEquipo(); }
 }
@@ -2545,7 +2545,8 @@ function renderPlanificacion(){
   }).join('');
 
   const tbody = document.getElementById('planBody');
-  tbody.innerHTML = PLANIFICACION_EJECUTIVOS.map(ex=>{
+  const planExecs = PLANIFICACION_EJECUTIVOS.filter(ex=>{ const st=equipoEstados[ex]; return !st || !st.estado || st.estado==='activo'; });
+  tbody.innerHTML = planExecs.map(ex=>{
     return `<tr>
       <td class="plan-name" rowspan="2">${escapeHtml(ex)}<span class="pn-meta">🎯 ${META_CONTACTOS_SEMANA_16} contactos · ${META_EMISIONES_SEMANA_16} emisiones / semana</span></td>
       ${diasConFecha.map(({dia,fecha})=>planCellHtml(ex,weekToShow,dia,'AM',fecha)).join('')}
