@@ -791,6 +791,11 @@ select#metasExecSelect,input#metasMonthSelect{background:var(--surface-2);border
         <h2>Matriz de ofertas</h2>
         <p id="ofertasHint">Ofertas disponibles del mes.</p>
       </div>
+      <div class="card" id="cardCargarMatriz" style="margin-bottom:18px;">
+        <div class="section-title" style="margin-top:0;">Actualizar matriz del mes</div>
+        <p style="color:var(--text-dim);font-size:13px;margin:0 0 10px;">Reemplaza todas las ofertas actuales por la matriz de noviembre 2026 (Terreno CAV).</p>
+        <button class="btn" id="btnCargarMatrizNov">Cargar matriz de noviembre 2026</button>
+      </div>
       <div class="card" id="cardNuevaOferta" style="margin-bottom:18px;">
         <div class="section-title" style="margin-top:0;">Agregar oferta</div>
         <div class="form-grid">
@@ -2741,6 +2746,7 @@ function renderOfertas(){
     ? 'Ofertas disponibles del mes. Puedes agregar, editar o eliminar.'
     : 'Ofertas disponibles del mes. Solo lectura.';
   document.getElementById('cardNuevaOferta').style.display = CAN_EDIT_ADMIN ? '' : 'none';
+  document.getElementById('cardCargarMatriz').style.display = CAN_EDIT_ADMIN ? '' : 'none';
 
   const tbody = document.getElementById('ofertasTabla');
   document.getElementById('ofertasEmpty').style.display = ofertas.length? 'none':'block';
@@ -2790,6 +2796,37 @@ document.getElementById('btnGuardarOferta').addEventListener('click', async ()=>
   }
 });
 
+const OFERTAS_NOVIEMBRE = [{"tipoOferta": "BTL", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 26%x 6 meses BA 600", "lleno": "18990", "descuento": "-5000", "precioFinal": "13990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "BTL", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 21% x 6 meses BA 600", "lleno": "18990", "descuento": "-4000", "precioFinal": "14990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "BTL", "descripcionPlan": "600 Megas Fibra Dúo HBO Max con anuncios", "nombreCrm": "DUO (Internet Fibra_600 + TV INICIA)", "promocion": "Descuento 24% x 6 meses BA DUO 600 TV INICIA", "lleno": "36990", "descuento": "-9000", "precioFinal": "27990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "940 Megas Fibra", "nombreCrm": "Internet Fibra940", "promocion": "Descuento 26% x 12 meses BA_940", "lleno": "26990", "descuento": "-7000", "precioFinal": "19990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 10% x 12 meses BA 600", "lleno": "18990", "descuento": "-2000", "precioFinal": "16990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "800 Megas Fibra Paramount+", "nombreCrm": "Internet Fibra 800+", "promocion": "PRECIO ÚNICO", "lleno": "19990", "descuento": "0", "precioFinal": "19990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "940 Megas Fibra Dúo Disney+ Premium MAX", "nombreCrm": "DUO (Internet Fibra_940 + TV PRO)", "promocion": "Descuento_34% x 12 meses BA DUO 940 TV PRO", "lleno": "52990", "descuento": "-18000", "precioFinal": "34990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "800 Megas Fibra Dúo MAX Paramount+", "nombreCrm": "DUO (Internet Fibra_800 + TV FULL)", "promocion": "PRECIO ÚNICO", "lleno": "37990", "descuento": "0", "precioFinal": "37990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "600 Megas Fibra Dúo HBO Max con anuncios", "nombreCrm": "DUO (Internet Fibra_600 + TV INICIA)", "promocion": "Descuento 21% x 12 meses BA DUO 600 TV INICIA", "lleno": "36990", "descuento": "-8000", "precioFinal": "28990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 10% x 12 meses BA 600", "lleno": "18990", "descuento": "-2000", "precioFinal": "16990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "600 Megas Fibra Dúo HBO Max con anuncios", "nombreCrm": "DUO (Internet Fibra_600 + TV INICIA)", "promocion": "Descuento 19% x 12 meses BA DUO 600 TV INICIA", "lleno": "36990", "descuento": "-7000", "precioFinal": "29990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO", "descripcionPlan": "940 Megas Fibra", "nombreCrm": "Internet Fibra940", "promocion": "Descuento 29% x 12 meses BA 940", "lleno": "26990", "descuento": "-8000", "precioFinal": "18990", "boNameTnt": "", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO y TOTALIZACION", "descripcionPlan": "800 Megas Fibra Paramount+ + Móvil", "nombreCrm": "Internet Fibra 800+_", "promocion": "PRECIO ÚNICO", "lleno": "19990", "descuento": "0", "precioFinal": "19990", "boNameTnt": "incluye Paramount+", "precio": "", "precioFinal2": ""}, {"tipoOferta": "MASIVO y TOTALIZACION", "descripcionPlan": "800 Megas Fibra Dúo MAX Paramount+ + Móvil", "nombreCrm": "DUO (Internet Fibra_800 + TV FULL_)", "promocion": "PRECIO ÚNICO", "lleno": "47980", "descuento": "-9990", "precioFinal": "37990", "boNameTnt": "incluye Paramount+ , HBO Max y Movistar TV", "precio": "", "precioFinal2": "37990"}, {"tipoOferta": "TOTALIZACION", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 26% x 12 meses BA 600 + beneficio salto velocidad 800 +  HBOMAX", "lleno": "18990", "descuento": "-5000", "precioFinal": "13990", "boNameTnt": "HBOMAX Estandar", "precio": "5990", "precioFinal2": "19980"}, {"tipoOferta": "TOTALIZACION", "descripcionPlan": "Internet Fibra Optica 600/600", "nombreCrm": "Internet Fibra_600", "promocion": "Descuento 26% x 12 meses BA 600", "lleno": "18990", "descuento": "-5000", "precioFinal": "13990", "boNameTnt": "", "precio": "", "precioFinal2": "13990"}, {"tipoOferta": "TOTALIZACION", "descripcionPlan": "600 Megas Fibra Duo HBO Max con anuncios", "nombreCrm": "DUO (Internet Fibra_600 + TV INICIA)", "promocion": "Descuento 24%X12M", "lleno": "36990", "descuento": "-9000", "precioFinal": "27990", "boNameTnt": "Incluye HBO con anuncios y Movistar TV", "precio": "", "precioFinal2": "27990"}];
+document.getElementById('btnCargarMatrizNov').addEventListener('click', async ()=>{
+  if(!CAN_EDIT_ADMIN) return;
+  if(!confirm('Esto ELIMINARÁ las '+ofertas.length+' ofertas actuales y cargará las '+OFERTAS_NOVIEMBRE.length+' de la matriz de noviembre 2026. ¿Continuar?')) return;
+  const btn = document.getElementById('btnCargarMatrizNov');
+  btn.disabled = true;
+  try{
+    const viejas = ofertas.slice();
+    for(let i=0;i<viejas.length;i++){
+      btn.textContent = 'Eliminando '+(i+1)+'/'+viejas.length+'...';
+      await saveOferta({action:'delete', id: viejas[i].id});
+      await new Promise(r=>setTimeout(r, 350));
+    }
+    const nuevas = [];
+    for(let i=0;i<OFERTAS_NOVIEMBRE.length;i++){
+      btn.textContent = 'Cargando '+(i+1)+'/'+OFERTAS_NOVIEMBRE.length+'...';
+      const rec = Object.assign({id: uid(), updatedAt: Date.now()}, OFERTAS_NOVIEMBRE[i]);
+      await saveOferta(rec);
+      nuevas.push(rec);
+      await new Promise(r=>setTimeout(r, 350));
+    }
+    ofertas = nuevas;
+    populatePlanSelects();
+    renderOfertas();
+    showToast('Matriz de noviembre cargada ('+nuevas.length+' ofertas). Verifica en Google Sheets.');
+  }catch(e){
+    showToast('Error durante la carga. Recarga la página y revisa la matriz.');
+  }
+  btn.textContent = 'Cargar matriz de noviembre 2026';
+  btn.disabled = false;
+});
 let editOfertaTargetId = null;
 document.addEventListener('click', async (e)=>{
   const editBtn = e.target.closest('.btn-editar-oferta');
